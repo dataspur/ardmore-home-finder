@@ -1,35 +1,26 @@
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { Home, BedDouble, Bath, Square } from "lucide-react";
+import { Home } from "lucide-react";
 
 const forSaleListings = [
   {
     id: 1,
-    title: "Charming Starter Home",
-    address: "234 Pine Street, Ardmore",
-    price: 175000,
-    beds: 3,
-    baths: 2,
-    sqft: 1400,
+    image: "/images/for-sale-1.jpg",
+    title: "3 Bed / 2 Bath – Forest Ln.",
+    text: "$215,000 · 1,700 sq ft",
   },
   {
     id: 2,
-    title: "Updated Ranch Style",
-    address: "567 Cedar Lane, Ardmore",
-    price: 225000,
-    beds: 3,
-    baths: 2,
-    sqft: 1750,
+    image: "/images/for-sale-2.jpg",
+    title: "2 Bed / 2 Bath – East Main",
+    text: "$179,000 · 1,300 sq ft",
   },
   {
     id: 3,
-    title: "Executive Family Home",
-    address: "890 Birch Boulevard, Ardmore",
-    price: 325000,
-    beds: 4,
-    baths: 3,
-    sqft: 2400,
+    image: "/images/for-sale-3.jpg",
+    title: "4 Bed / 3 Bath – Willow Way",
+    text: "$249,000 · 2,100 sq ft",
   },
 ];
 
@@ -38,17 +29,17 @@ const ForSale = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="pt-20">
-        {/* Header */}
+        {/* Hero */}
         <section className="py-16 bg-primary text-primary-foreground">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">Homes for Sale</h1>
             <p className="text-lg text-primary-foreground/80 max-w-2xl mx-auto">
-              Discover your dream home in Ardmore, Oklahoma.
+              Browse available properties in the Ardmore area.
             </p>
           </div>
         </section>
 
-        {/* Listings */}
+        {/* Card Grid */}
         <section className="py-16">
           <div className="container mx-auto px-4">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -61,23 +52,9 @@ const ForSale = () => {
                     <Home className="w-16 h-16 text-muted-foreground/30" />
                   </div>
                   <div className="p-6">
-                    <h3 className="text-xl font-bold text-foreground mb-1">{listing.title}</h3>
-                    <p className="text-muted-foreground text-sm mb-4">{listing.address}</p>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                      <span className="flex items-center gap-1">
-                        <BedDouble size={16} /> {listing.beds} beds
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Bath size={16} /> {listing.baths} bath
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Square size={16} /> {listing.sqft} sqft
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold text-primary">${listing.price.toLocaleString()}</span>
-                      <Button size="sm">View Details</Button>
-                    </div>
+                    <h3 className="text-xl font-bold text-foreground mb-2">{listing.title}</h3>
+                    <p className="text-muted-foreground mb-6">{listing.text}</p>
+                    <Button className="w-full" variant="outline">Learn More</Button>
                   </div>
                 </div>
               ))}
