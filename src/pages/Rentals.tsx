@@ -1,35 +1,27 @@
+import { Link } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { Home, BedDouble, Bath, Square } from "lucide-react";
+import { Home } from "lucide-react";
 
 const rentalListings = [
   {
     id: 1,
-    title: "Cozy 2BR House",
-    address: "123 Oak Street, Ardmore",
-    price: 950,
-    beds: 2,
-    baths: 1,
-    sqft: 1100,
+    image: "/images/rental-1.jpg",
+    title: "3 Bed / 2 Bath – Maple St.",
+    text: "$1,200/mo · 1,450 sq ft",
   },
   {
     id: 2,
-    title: "Modern 3BR Home",
-    address: "456 Elm Avenue, Ardmore",
-    price: 1250,
-    beds: 3,
-    baths: 2,
-    sqft: 1500,
+    image: "/images/rental-2.jpg",
+    title: "2 Bed / 1 Bath – 7th Ave.",
+    text: "$925/mo · 980 sq ft",
   },
   {
     id: 3,
-    title: "Spacious 4BR Family Home",
-    address: "789 Maple Drive, Ardmore",
-    price: 1450,
-    beds: 4,
-    baths: 2,
-    sqft: 1850,
+    image: "/images/rental-3.jpg",
+    title: "4 Bed / 3 Bath – Cedar Dr.",
+    text: "$1,600/mo · 1,900 sq ft",
   },
 ];
 
@@ -38,17 +30,17 @@ const Rentals = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="pt-20">
-        {/* Header */}
+        {/* Hero */}
         <section className="py-16 bg-primary text-primary-foreground">
           <div className="container mx-auto px-4 text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Rental Properties</h1>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">Available Rentals</h1>
             <p className="text-lg text-primary-foreground/80 max-w-2xl mx-auto">
-              Find your perfect rental home in Ardmore and surrounding areas.
+              Find your next home in Ardmore, Oklahoma.
             </p>
           </div>
         </section>
 
-        {/* Listings */}
+        {/* Card Grid */}
         <section className="py-16">
           <div className="container mx-auto px-4">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -61,23 +53,11 @@ const Rentals = () => {
                     <Home className="w-16 h-16 text-muted-foreground/30" />
                   </div>
                   <div className="p-6">
-                    <h3 className="text-xl font-bold text-foreground mb-1">{listing.title}</h3>
-                    <p className="text-muted-foreground text-sm mb-4">{listing.address}</p>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                      <span className="flex items-center gap-1">
-                        <BedDouble size={16} /> {listing.beds} beds
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Bath size={16} /> {listing.baths} bath
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Square size={16} /> {listing.sqft} sqft
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold text-primary">${listing.price}/mo</span>
-                      <Button size="sm">View Details</Button>
-                    </div>
+                    <h3 className="text-xl font-bold text-foreground mb-2">{listing.title}</h3>
+                    <p className="text-muted-foreground mb-6">{listing.text}</p>
+                    <Link to="/resident-portal">
+                      <Button className="w-full">Apply Now</Button>
+                    </Link>
                   </div>
                 </div>
               ))}
