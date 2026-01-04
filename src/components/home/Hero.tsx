@@ -1,18 +1,25 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import heroImage from "@/assets/hero-home.jpg";
+import droneVideo from "@/assets/drone-video.mp4";
 
 const Hero = () => {
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
-      {/* Background Image */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${heroImage})` }}
+      {/* Background Video */}
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        poster={heroImage}
+        className="absolute inset-0 w-full h-full object-cover"
       >
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-hero" />
-      </div>
+        <source src={droneVideo} type="video/mp4" />
+      </video>
+      
+      {/* Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-hero" />
 
       {/* Content */}
       <div className="relative z-10 container mx-auto px-4 text-center">
