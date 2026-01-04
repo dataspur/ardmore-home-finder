@@ -7,6 +7,16 @@ import { CreditCard, Wrench, FileText, Phone, Mail } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
+const NAVBAR_HEIGHT = 80;
+
+const scrollToSection = (id: string) => {
+  const element = document.getElementById(id);
+  if (element) {
+    const top = element.getBoundingClientRect().top + window.scrollY - NAVBAR_HEIGHT;
+    window.scrollTo({ top, behavior: "smooth" });
+  }
+};
+
 const ResidentPortal = () => {
   const [maintenanceForm, setMaintenanceForm] = useState({ name: "", email: "", address: "", issue: "" });
   const [leaseForm, setLeaseForm] = useState({ name: "", email: "", address: "" });
@@ -35,7 +45,7 @@ const ResidentPortal = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background animate-fade-in">
       <Navbar />
       <main className="pt-20">
         {/* Hero */}
@@ -75,9 +85,13 @@ const ResidentPortal = () => {
                 <p className="text-muted-foreground mb-6">
                   Let us know what needs attention and our team will be on it.
                 </p>
-                <a href="#maintenance-form">
-                  <Button variant="outline" className="w-full">Submit Request</Button>
-                </a>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => scrollToSection("maintenance-form")}
+                >
+                  Submit Request
+                </Button>
               </div>
 
               {/* Lease Copy */}
@@ -89,9 +103,13 @@ const ResidentPortal = () => {
                 <p className="text-muted-foreground mb-6">
                   Need a copy of your lease agreement? Request one below.
                 </p>
-                <a href="#lease-form">
-                  <Button variant="outline" className="w-full">Request Lease</Button>
-                </a>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => scrollToSection("lease-form")}
+                >
+                  Request Lease
+                </Button>
               </div>
             </div>
           </div>

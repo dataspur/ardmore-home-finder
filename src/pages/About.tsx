@@ -11,7 +11,7 @@ const whyChooseUs = [
 
 const About = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background animate-fade-in">
       <Navbar />
       <main className="pt-20">
         {/* Hero */}
