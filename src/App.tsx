@@ -20,6 +20,7 @@ import TenantPay from "./pages/TenantPay";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import TenantPaymentSuccess from "./pages/TenantPaymentSuccess";
 import Auth from "./pages/Auth";
+import AdminLogin from "./pages/AdminLogin";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/admin/Dashboard";
 import Tenants from "./pages/admin/Tenants";
@@ -52,6 +53,7 @@ const App = () => (
           <Route path="/pay/:token/success" element={<TenantPaymentSuccess />} />
           <Route path="/success" element={<PaymentSuccess />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
           <Route
             path="/resident-portal"
             element={

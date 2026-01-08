@@ -4,8 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
-const ADMIN_EMAIL = "bradynorman@ymail.com";
-
 interface AdminRouteProps {
   children: React.ReactNode;
 }
@@ -25,7 +23,13 @@ export default function AdminRoute({ children }: AdminRouteProps) {
         return;
       }
 
-      if (session.user.email === ADMIN_EMAIL) {
+      // Check admin role in database
+      const { data: hasAdminRole } = await supabase.rpc('has_role', {
+        _user_id: session.user.id,
+        _role: 'admin'
+      });
+
+      if (hasAdminRole) {
         setIsAuthorized(true);
       } else {
         toast({
@@ -40,9 +44,13 @@ export default function AdminRoute({ children }: AdminRouteProps) {
 
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      if (session?.user?.email === ADMIN_EMAIL) {
-        setIsAuthorized(true);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
+      if (session?.user) {
+        const { data: hasAdminRole } = await supabase.rpc('has_role', {
+          _user_id: session.user.id,
+          _role: 'admin'
+        });
+        setIsAuthorized(hasAdminRole === true);
       } else {
         setIsAuthorized(false);
       }
@@ -61,7 +69,7 @@ export default function AdminRoute({ children }: AdminRouteProps) {
   }
 
   if (!isAuthorized) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/admin-login" replace />;
   }
 
   return <>{children}</>;
