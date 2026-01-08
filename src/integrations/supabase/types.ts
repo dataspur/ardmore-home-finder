@@ -189,6 +189,10 @@ export type Database = {
     }
     Functions: {
       get_lease_details: { Args: { lookup_token: string }; Returns: Json }
+      get_tenant_payment_history: {
+        Args: { lookup_token: string }
+        Returns: Json
+      }
     }
     Enums: {
       form_type: "contact" | "maintenance" | "lease"
