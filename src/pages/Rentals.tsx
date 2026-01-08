@@ -2,24 +2,26 @@ import { Link } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { Home } from "lucide-react";
+import rental1Img from "@/assets/rental-1.png";
+import rental2Img from "@/assets/rental-2.png";
+import rental3Img from "@/assets/rental-3.png";
 
 const rentalListings = [
   {
     id: 1,
-    image: "/images/rental-1.jpg",
+    image: rental1Img,
     title: "3 Bed / 2 Bath – Maple St.",
     text: "$1,200/mo · 1,450 sq ft",
   },
   {
     id: 2,
-    image: "/images/rental-2.jpg",
+    image: rental2Img,
     title: "2 Bed / 1 Bath – 7th Ave.",
     text: "$925/mo · 980 sq ft",
   },
   {
     id: 3,
-    image: "/images/rental-3.jpg",
+    image: rental3Img,
     title: "4 Bed / 3 Bath – Cedar Dr.",
     text: "$1,600/mo · 1,900 sq ft",
   },
@@ -49,8 +51,12 @@ const Rentals = () => {
                   key={listing.id} 
                   className="bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-elevated transition-all duration-300 hover:-translate-y-1"
                 >
-                  <div className="h-48 bg-muted flex items-center justify-center">
-                    <Home className="w-16 h-16 text-muted-foreground/30" />
+                  <div className="h-48 overflow-hidden">
+                    <img 
+                      src={listing.image} 
+                      alt={listing.title} 
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <div className="p-6">
                     <h3 className="text-xl font-bold text-foreground mb-2">{listing.title}</h3>
