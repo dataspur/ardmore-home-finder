@@ -1,51 +1,58 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import PropertyInquiryDialog from "@/components/PropertyInquiryDialog";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
+import { useGeolocation } from "@/hooks/useGeolocation";
+import { calculateDistance, formatDistance } from "@/lib/distance";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { MapPin, Loader2, X } from "lucide-react";
 import sale1Img from "@/assets/sale-1.png";
 import sale2Img from "@/assets/sale-2.png";
 import sale3Img from "@/assets/sale-3.png";
 
-const forSaleListings = [
-  {
-    id: 1,
-    image: sale1Img,
-    title: "3 Bed / 2 Bath – Forest Ln.",
-    price: "$215,000",
-    size: "1,700 sq ft",
-    badge: "For Sale",
-  },
-  {
-    id: 2,
-    image: sale2Img,
-    title: "2 Bed / 2 Bath – East Main",
-    price: "$179,000",
-    size: "1,300 sq ft",
-    badge: "Featured",
-  },
-  {
-    id: 3,
-    image: sale3Img,
-    title: "4 Bed / 3 Bath – Willow Way",
-    price: "$249,000",
-    size: "2,100 sq ft",
-    badge: "For Sale",
-  },
-];
+// Fallback images for properties without image_url
+const fallbackImages = [sale1Img, sale2Img, sale3Img];
+
+interface Property {
+  id: string;
+  title: string;
+  price_display: string;
+  size_sqft: number | null;
+  badge: string | null;
+  image_url: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  address: string;
+}
 
 const PropertyCard = ({ 
   listing, 
   index, 
-  onLearnMore 
+  onLearnMore,
+  userLocation,
+  fallbackImage
 }: { 
-  listing: typeof forSaleListings[0]; 
+  listing: Property; 
   index: number;
   onLearnMore: (title: string) => void;
+  userLocation: { latitude: number; longitude: number } | null;
+  fallbackImage: string;
 }) => {
   const { ref, isVisible } = useScrollAnimation();
+
+  const distance = useMemo(() => {
+    if (!userLocation || !listing.latitude || !listing.longitude) return null;
+    return calculateDistance(
+      userLocation.latitude,
+      userLocation.longitude,
+      listing.latitude,
+      listing.longitude
+    );
+  }, [userLocation, listing.latitude, listing.longitude]);
 
   return (
     <div 
@@ -59,8 +66,16 @@ const PropertyCard = ({
         >
           {listing.badge}
         </Badge>
+        {distance !== null && (
+          <Badge 
+            className="absolute top-4 right-4 z-10 bg-background/90 text-foreground backdrop-blur-sm"
+          >
+            <MapPin className="w-3 h-3 mr-1" />
+            {formatDistance(distance)}
+          </Badge>
+        )}
         <img 
-          src={listing.image} 
+          src={listing.image_url || fallbackImage} 
           alt={listing.title} 
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           loading="lazy"
@@ -68,8 +83,8 @@ const PropertyCard = ({
       </div>
       <div className="p-6">
         <h3 className="font-heading text-h3 text-foreground mb-2">{listing.title}</h3>
-        <p className="font-heading text-price text-primary mb-1">{listing.price}</p>
-        <p className="font-body text-muted-foreground mb-6">{listing.size}</p>
+        <p className="font-heading text-price text-primary mb-1">{listing.price_display}</p>
+        <p className="font-body text-muted-foreground mb-6">{listing.size_sqft ? `${listing.size_sqft.toLocaleString()} sq ft` : ""}</p>
         <Button 
           className="w-full min-h-[44px]" 
           variant="outline"
@@ -84,6 +99,35 @@ const PropertyCard = ({
 
 const ForSale = () => {
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
+  const { location, loading: locationLoading, error: locationError, permissionDenied, requestLocation, clearLocation } = useGeolocation();
+
+  const { data: properties = [], isLoading } = useQuery({
+    queryKey: ["sale-properties"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("properties")
+        .select("id, title, price_display, size_sqft, badge, image_url, latitude, longitude, address")
+        .eq("property_type", "sale")
+        .eq("is_active", true);
+
+      if (error) throw error;
+      return data as Property[];
+    },
+  });
+
+  // Sort properties by distance if location is available
+  const sortedProperties = useMemo(() => {
+    if (!location || properties.length === 0) return properties;
+
+    return [...properties].sort((a, b) => {
+      if (!a.latitude || !a.longitude) return 1;
+      if (!b.latitude || !b.longitude) return -1;
+
+      const distA = calculateDistance(location.latitude, location.longitude, a.latitude, a.longitude);
+      const distB = calculateDistance(location.latitude, location.longitude, b.latitude, b.longitude);
+      return distA - distB;
+    });
+  }, [properties, location]);
 
   useEffect(() => {
     document.title = "Homes for Sale | Precision Capital";
@@ -103,19 +147,75 @@ const ForSale = () => {
           </div>
         </section>
 
+        {/* Location Controls */}
+        <section className="py-6 border-b border-border">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              {!location ? (
+                <Button
+                  variant="outline"
+                  onClick={requestLocation}
+                  disabled={locationLoading}
+                  className="min-h-[44px]"
+                >
+                  {locationLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Getting location...
+                    </>
+                  ) : (
+                    <>
+                      <MapPin className="w-4 h-4 mr-2" />
+                      Show properties near me
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2 bg-muted px-4 py-2 rounded-full">
+                  <MapPin className="w-4 h-4 text-primary" />
+                  <span className="font-body text-sm">Sorted by distance</span>
+                  <button
+                    onClick={clearLocation}
+                    className="ml-2 p-1 hover:bg-background rounded-full transition-colors"
+                    aria-label="Clear location"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+              {locationError && !permissionDenied && (
+                <p className="text-sm text-destructive">{locationError}</p>
+              )}
+              {permissionDenied && (
+                <p className="text-sm text-muted-foreground">
+                  Enable location in your browser to see distances
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+
         {/* Card Grid */}
         <section className="py-16">
           <div className="container mx-auto px-4">
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {forSaleListings.map((listing, index) => (
-                <PropertyCard 
-                  key={listing.id} 
-                  listing={listing} 
-                  index={index}
-                  onLearnMore={setSelectedProperty}
-                />
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {sortedProperties.map((listing, index) => (
+                  <PropertyCard 
+                    key={listing.id} 
+                    listing={listing} 
+                    index={index}
+                    onLearnMore={setSelectedProperty}
+                    userLocation={location}
+                    fallbackImage={fallbackImages[index % fallbackImages.length]}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </section>
       </main>
