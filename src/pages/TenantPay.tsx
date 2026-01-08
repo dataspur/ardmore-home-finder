@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +15,7 @@ import { ChargesBreakdownCard } from "@/components/tenant/ChargesBreakdownCard";
 import { PaymentHistoryCard } from "@/components/tenant/PaymentHistoryCard";
 import { ReportIssueDialog } from "@/components/tenant/ReportIssueDialog";
 import { TenantPortalFooter } from "@/components/tenant/TenantPortalFooter";
+import { AutopayCard } from "@/components/tenant/AutopayCard";
 
 interface LeaseDetails {
   tenant_name: string;
@@ -29,6 +30,7 @@ interface LeaseDetails {
   lease_id: string;
   tenant_id: string;
   lease_start_date?: string;
+  autopay_enabled?: boolean;
   last_payment?: {
     amount_cents: number;
     paid_at: string;
@@ -53,12 +55,34 @@ const formatCentsToDollars = (cents: number): string => {
 
 export default function TenantPay() {
   const { token } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParams();
   const [leaseDetails, setLeaseDetails] = useState<LeaseDetails | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadingPayment, setLoadingPayment] = useState(false);
+  const [loadingAutopay, setLoadingAutopay] = useState(false);
   const { toast } = useToast();
+
+  // Check for autopay success/cancel from URL params
+  useEffect(() => {
+    const autopayStatus = searchParams.get("autopay");
+    if (autopayStatus === "success") {
+      toast({
+        title: "Autopay Activated!",
+        description: "Your automatic payments have been set up successfully.",
+      });
+      // Remove the query params from URL
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (autopayStatus === "cancelled") {
+      toast({
+        variant: "destructive",
+        title: "Autopay Setup Cancelled",
+        description: "You can set up autopay anytime from your portal.",
+      });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [searchParams, toast]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -125,6 +149,35 @@ export default function TenantPay() {
         description: "Payment initialization failed. Please try again.",
       });
       setLoadingPayment(false);
+    }
+  };
+
+  const handleSetupAutopay = async () => {
+    if (!leaseDetails) return;
+
+    setLoadingAutopay(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("setup-autopay", {
+        body: {
+          lease_id: leaseDetails.lease_id,
+          return_url: window.location.href.split("?")[0], // Remove any existing params
+        },
+      });
+
+      if (error || !data?.url) {
+        throw new Error("Failed to initialize autopay setup");
+      }
+
+      window.location.href = data.url;
+    } catch (err) {
+      console.error("Autopay setup error:", err);
+      toast({
+        variant: "destructive",
+        title: "Autopay Setup Failed",
+        description: "Unable to set up autopay. Please try again.",
+      });
+      setLoadingAutopay(false);
     }
   };
 
@@ -208,6 +261,17 @@ export default function TenantPay() {
             rentAmountCents={leaseDetails!.rent_amount_cents}
             lateFeeCents={leaseDetails!.late_fee_cents}
             totalDueCents={leaseDetails!.total_due_cents}
+          />
+        </div>
+
+        {/* Autopay Card */}
+        <div className="mt-6">
+          <AutopayCard
+            autopayEnabled={leaseDetails!.autopay_enabled || false}
+            isLoading={loadingAutopay}
+            onSetupAutopay={handleSetupAutopay}
+            rentAmountFormatted={formatCentsToDollars(leaseDetails!.rent_amount_cents)}
+            dueDate={leaseDetails!.due_date}
           />
         </div>
 
