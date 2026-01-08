@@ -14,6 +14,7 @@ interface NotificationRequest {
   email: string;
   address?: string;
   issue?: string;
+  message?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -25,7 +26,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { form_type, name, email, address, issue }: NotificationRequest = await req.json();
+    const { form_type, name, email, address, issue, message }: NotificationRequest = await req.json();
     
     console.log("Received notification request:", { form_type, name, email, address });
 
@@ -34,69 +35,93 @@ const handler = async (req: Request): Promise<Response> => {
     const timestamp = new Date().toLocaleString("en-US", { timeZone: "America/Chicago" });
 
     if (form_type === "maintenance") {
-      subject = `New Maintenance Request from ${name}`;
+      subject = `🔧 New Maintenance Request from ${name}`;
       htmlContent = `
-        <h2>New Maintenance Request</h2>
-        <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
-          <tr>
-            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Resident Name</td>
-            <td style="padding: 8px; border: 1px solid #ddd;">${name}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Resident Email</td>
-            <td style="padding: 8px; border: 1px solid #ddd;">${email}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Property Address</td>
-            <td style="padding: 8px; border: 1px solid #ddd;">${address || "Not provided"}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Issue Description</td>
-            <td style="padding: 8px; border: 1px solid #ddd;">${issue || "Not provided"}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Submitted</td>
-            <td style="padding: 8px; border: 1px solid #ddd;">${timestamp}</td>
-          </tr>
-        </table>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">New Maintenance Request</h2>
+          <table style="border-collapse: collapse; width: 100%;">
+            <tr>
+              <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Resident Name</td>
+              <td style="padding: 12px; border: 1px solid #e5e7eb;">${name}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Resident Email</td>
+              <td style="padding: 12px; border: 1px solid #e5e7eb;"><a href="mailto:${email}">${email}</a></td>
+            </tr>
+            <tr>
+              <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Property Address</td>
+              <td style="padding: 12px; border: 1px solid #e5e7eb;">${address || "Not provided"}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Issue Description</td>
+              <td style="padding: 12px; border: 1px solid #e5e7eb;">${issue || "Not provided"}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Submitted</td>
+              <td style="padding: 12px; border: 1px solid #e5e7eb;">${timestamp}</td>
+            </tr>
+          </table>
+          <p style="color: #6b7280; font-size: 12px; margin-top: 20px;">This email was sent from the Precision Capital Resident Portal.</p>
+        </div>
       `;
     } else if (form_type === "lease") {
-      subject = `Lease Copy Request from ${name}`;
+      subject = `📄 Lease Copy Request from ${name}`;
       htmlContent = `
-        <h2>Lease Copy Request</h2>
-        <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
-          <tr>
-            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Resident Name</td>
-            <td style="padding: 8px; border: 1px solid #ddd;">${name}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Resident Email</td>
-            <td style="padding: 8px; border: 1px solid #ddd;">${email}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Property Address</td>
-            <td style="padding: 8px; border: 1px solid #ddd;">${address || "Not provided"}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Submitted</td>
-            <td style="padding: 8px; border: 1px solid #ddd;">${timestamp}</td>
-          </tr>
-        </table>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">Lease Copy Request</h2>
+          <table style="border-collapse: collapse; width: 100%;">
+            <tr>
+              <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Resident Name</td>
+              <td style="padding: 12px; border: 1px solid #e5e7eb;">${name}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Resident Email</td>
+              <td style="padding: 12px; border: 1px solid #e5e7eb;"><a href="mailto:${email}">${email}</a></td>
+            </tr>
+            <tr>
+              <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Property Address</td>
+              <td style="padding: 12px; border: 1px solid #e5e7eb;">${address || "Not provided"}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Submitted</td>
+              <td style="padding: 12px; border: 1px solid #e5e7eb;">${timestamp}</td>
+            </tr>
+          </table>
+          <p style="color: #6b7280; font-size: 12px; margin-top: 20px;">This email was sent from the Precision Capital Resident Portal.</p>
+        </div>
       `;
     } else {
-      subject = `Contact Form Submission from ${name}`;
+      subject = `📬 New Contact Form Message from ${name}`;
       htmlContent = `
-        <h2>Contact Form Submission</h2>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Submitted:</strong> ${timestamp}</p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">New Contact Form Message</h2>
+          <table style="border-collapse: collapse; width: 100%;">
+            <tr>
+              <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Name</td>
+              <td style="padding: 12px; border: 1px solid #e5e7eb;">${name}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Email</td>
+              <td style="padding: 12px; border: 1px solid #e5e7eb;"><a href="mailto:${email}">${email}</a></td>
+            </tr>
+            <tr>
+              <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Message</td>
+              <td style="padding: 12px; border: 1px solid #e5e7eb;">${message || "No message provided"}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Submitted</td>
+              <td style="padding: 12px; border: 1px solid #e5e7eb;">${timestamp}</td>
+            </tr>
+          </table>
+          <p style="color: #6b7280; font-size: 12px; margin-top: 20px;">This email was sent from the Precision Capital website contact form.</p>
+        </div>
       `;
     }
 
     console.log("Sending email to management@precisioncapital.homes");
     
     const emailResponse = await resend.emails.send({
-      from: "Precision Capital <onboarding@resend.dev>",
+      from: "Precision Capital <noreply@precisioncapital.homes>",
       to: ["management@precisioncapital.homes"],
       subject,
       html: htmlContent,

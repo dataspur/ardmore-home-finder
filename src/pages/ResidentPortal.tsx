@@ -181,7 +181,7 @@ const ResidentPortal = () => {
                 <p className="text-muted-foreground mb-6">
                   Make a secure payment using our Stripe-powered portal. A small service fee applies.
                 </p>
-                <a href="https://buy.stripe.com/YOUR_CUSTOM_LINK" target="_blank" rel="noopener noreferrer">
+                <a href="https://buy.stripe.com/8wM9AO4JIduX96gcN7" target="_blank" rel="noopener noreferrer">
                   <Button className="w-full">Pay Rent</Button>
                 </a>
               </div>
@@ -372,13 +372,13 @@ const ResidentPortal = () => {
             <div className="max-w-2xl mx-auto text-center">
               <h2 className="text-2xl font-bold text-foreground mb-6">Need Help?</h2>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-                <a href="tel:5805551234" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
+                <a href="tel:5803990001" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
                   <Phone className="w-5 h-5" />
-                  (580) 555-1234
+                  (580) 399-0001
                 </a>
-                <a href="mailto:help@precisioncapitalrentals.com" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
+                <a href="mailto:management@precisioncapital.homes" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
                   <Mail className="w-5 h-5" />
-                  help@precisioncapitalrentals.com
+                  management@precisioncapital.homes
                 </a>
               </div>
             </div>
