@@ -2,6 +2,12 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
+declare global {
+  interface Window {
+    gtag: (...args: any[]) => void;
+  }
+}
+
 const CookieConsent = () => {
   const [showBanner, setShowBanner] = useState(false);
 
@@ -16,11 +22,21 @@ const CookieConsent = () => {
 
   const acceptCookies = () => {
     localStorage.setItem("cookie-consent", "accepted");
+    if (typeof window.gtag === 'function') {
+      window.gtag('consent', 'update', {
+        'analytics_storage': 'granted'
+      });
+    }
     setShowBanner(false);
   };
 
   const declineCookies = () => {
     localStorage.setItem("cookie-consent", "declined");
+    if (typeof window.gtag === 'function') {
+      window.gtag('consent', 'update', {
+        'analytics_storage': 'denied'
+      });
+    }
     setShowBanner(false);
   };
 
