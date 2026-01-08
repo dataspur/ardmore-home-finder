@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import TenantMessagesCard from "@/components/tenant/TenantMessagesCard";
 
 const NAVBAR_HEIGHT = 80;
 
@@ -201,6 +202,15 @@ const ResidentPortal = () => {
                 <LogOut className="w-4 h-4" />
                 Sign Out
               </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* Messages from Management */}
+        <section className="py-8">
+          <div className="container mx-auto px-4">
+            <div className="max-w-5xl mx-auto">
+              <TenantMessagesCard />
             </div>
           </div>
         </section>

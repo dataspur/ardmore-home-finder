@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { Wrench, FileText, Mail, Check, Clock, Eye } from "lucide-react";
+import { Wrench, FileText, Mail, Check, Eye, Send, Users } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -26,7 +26,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import ComposeMessageDialog from "@/components/admin/ComposeMessageDialog";
 import type { Database } from "@/integrations/supabase/types";
 
 type FormSubmission = Database["public"]["Tables"]["form_submissions"]["Row"];
@@ -52,10 +54,21 @@ const statusConfig: Record<SubmissionStatus, { label: string; variant: "default"
   cancelled: { label: "Cancelled", variant: "outline" },
 };
 
+interface SentMessage {
+  id: string;
+  subject: string;
+  body: string;
+  is_mass_message: boolean;
+  created_at: string;
+  recipient_count: number;
+}
+
 export default function Messages() {
   const [filterType, setFilterType] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [selectedMessage, setSelectedMessage] = useState<FormSubmission | null>(null);
+  const [selectedSentMessage, setSelectedSentMessage] = useState<SentMessage | null>(null);
+  const [composeOpen, setComposeOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -77,6 +90,37 @@ export default function Messages() {
       const { data, error } = await query;
       if (error) throw error;
       return data;
+    },
+  });
+
+  const { data: sentMessages, isLoading: sentLoading } = useQuery({
+    queryKey: ["sent-messages"],
+    queryFn: async () => {
+      const { data: adminMessages, error } = await supabase
+        .from("admin_messages")
+        .select(`
+          id,
+          subject,
+          body,
+          is_mass_message,
+          created_at
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Get recipient counts for each message
+      const messagesWithCounts = await Promise.all(
+        (adminMessages || []).map(async (msg) => {
+          const { count } = await supabase
+            .from("message_recipients")
+            .select("*", { count: "exact", head: true })
+            .eq("message_id", msg.id);
+          return { ...msg, recipient_count: count || 0 };
+        })
+      );
+
+      return messagesWithCounts;
     },
   });
 
@@ -110,133 +154,209 @@ export default function Messages() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Messages</h1>
-        <p className="text-muted-foreground">
-          View and manage form submissions from the website
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Messages</h1>
+          <p className="text-muted-foreground">
+            View submissions and send messages to tenants
+          </p>
+        </div>
+        <Button onClick={() => setComposeOpen(true)}>
+          <Send className="h-4 w-4 mr-2" />
+          Compose Message
+        </Button>
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Type:</span>
-          <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="maintenance">Maintenance</SelectItem>
-              <SelectItem value="lease">Lease</SelectItem>
-              <SelectItem value="contact">Contact</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <Tabs defaultValue="inbox">
+        <TabsList>
+          <TabsTrigger value="inbox" className="flex items-center gap-2">
+            Inbox
+            {pendingCount > 0 && (
+              <Badge variant="destructive" className="ml-1">{pendingCount}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="sent">Sent Messages</TabsTrigger>
+        </TabsList>
 
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Status:</span>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <TabsContent value="inbox" className="space-y-4">
+          {/* Filters */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Type:</span>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                  <SelectItem value="lease">Lease</SelectItem>
+                  <SelectItem value="contact">Contact</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        {pendingCount > 0 && (
-          <Badge variant="destructive" className="ml-auto">
-            {pendingCount} pending
-          </Badge>
-        )}
-      </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Status:</span>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-      {/* Messages Table */}
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[120px]">Type</TableHead>
-              <TableHead>From</TableHead>
-              <TableHead>Subject</TableHead>
-              <TableHead className="w-[120px]">Date</TableHead>
-              <TableHead className="w-[120px]">Status</TableHead>
-              <TableHead className="w-[100px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  Loading messages...
-                </TableCell>
-              </TableRow>
-            ) : messages?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  No messages found
-                </TableCell>
-              </TableRow>
-            ) : (
-              messages?.map((message) => {
-                const preview = getMessagePreview(message.data);
-                const statusInfo = statusConfig[message.status];
-                return (
-                  <TableRow key={message.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {formTypeIcons[message.form_type]}
-                        <span className="text-sm">{formTypeLabels[message.form_type]}</span>
-                      </div>
+          {/* Messages Table */}
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[120px]">Type</TableHead>
+                  <TableHead>From</TableHead>
+                  <TableHead>Subject</TableHead>
+                  <TableHead className="w-[120px]">Date</TableHead>
+                  <TableHead className="w-[120px]">Status</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      Loading messages...
                     </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{preview.name}</p>
-                        <p className="text-sm text-muted-foreground">{preview.email}</p>
-                      </div>
+                  </TableRow>
+                ) : messages?.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      No messages found
                     </TableCell>
-                    <TableCell>
-                      <p className="truncate max-w-[200px]">{preview.subject}</p>
+                  </TableRow>
+                ) : (
+                  messages?.map((message) => {
+                    const preview = getMessagePreview(message.data);
+                    const statusInfo = statusConfig[message.status];
+                    return (
+                      <TableRow key={message.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {formTypeIcons[message.form_type]}
+                            <span className="text-sm">{formTypeLabels[message.form_type]}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{preview.name}</p>
+                            <p className="text-sm text-muted-foreground">{preview.email}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <p className="truncate max-w-[200px]">{preview.subject}</p>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {format(new Date(message.created_at), "MMM d, yyyy")}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setSelectedMessage(message)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {message.status === "pending" && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => updateStatusMutation.mutate({ id: message.id, status: "completed" })}
+                              >
+                                <Check className="h-4 w-4 text-green-500" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="sent" className="space-y-4">
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Subject</TableHead>
+                  <TableHead className="w-[150px]">Recipients</TableHead>
+                  <TableHead className="w-[120px]">Date</TableHead>
+                  <TableHead className="w-[80px]">View</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sentLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8">
+                      Loading sent messages...
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {format(new Date(message.created_at), "MMM d, yyyy")}
+                  </TableRow>
+                ) : sentMessages?.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      No sent messages yet
                     </TableCell>
-                    <TableCell>
-                      <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
+                  </TableRow>
+                ) : (
+                  sentMessages?.map((msg) => (
+                    <TableRow key={msg.id}>
+                      <TableCell>
+                        <p className="font-medium">{msg.subject}</p>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {msg.is_mass_message ? (
+                            <Badge variant="secondary" className="flex items-center gap-1">
+                              <Users className="h-3 w-3" />
+                              All ({msg.recipient_count})
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline">{msg.recipient_count} tenant</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {format(new Date(msg.created_at), "MMM d, yyyy")}
+                      </TableCell>
+                      <TableCell>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setSelectedMessage(message)}
+                          onClick={() => setSelectedSentMessage(msg)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {message.status === "pending" && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => updateStatusMutation.mutate({ id: message.id, status: "completed" })}
-                          >
-                            <Check className="h-4 w-4 text-green-500" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Message Detail Dialog */}
       <Dialog open={!!selectedMessage} onOpenChange={() => setSelectedMessage(null)}>
@@ -283,6 +403,33 @@ export default function Messages() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Sent Message Detail Dialog */}
+      <Dialog open={!!selectedSentMessage} onOpenChange={() => setSelectedSentMessage(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{selectedSentMessage?.subject}</DialogTitle>
+          </DialogHeader>
+          {selectedSentMessage && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>{format(new Date(selectedSentMessage.created_at), "MMMM d, yyyy 'at' h:mm a")}</span>
+                <Badge variant={selectedSentMessage.is_mass_message ? "secondary" : "outline"}>
+                  {selectedSentMessage.is_mass_message ? "Mass message" : "Individual"}
+                </Badge>
+              </div>
+              <div className="border-l-4 border-primary pl-4 py-2 bg-muted/50 rounded-r-lg">
+                <p className="whitespace-pre-wrap">{selectedSentMessage.body}</p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Sent to {selectedSentMessage.recipient_count} recipient(s)
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <ComposeMessageDialog open={composeOpen} onOpenChange={setComposeOpen} />
     </div>
   );
 }
