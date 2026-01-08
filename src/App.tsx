@@ -18,6 +18,7 @@ import Terms from "./pages/Terms";
 import ResidentPortal from "./pages/ResidentPortal";
 import TenantPay from "./pages/TenantPay";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import TenantPaymentSuccess from "./pages/TenantPaymentSuccess";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/admin/Dashboard";
@@ -48,6 +49,7 @@ const App = () => (
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/pay/:token" element={<TenantPay />} />
+          <Route path="/pay/:token/success" element={<TenantPaymentSuccess />} />
           <Route path="/success" element={<PaymentSuccess />} />
           <Route path="/auth" element={<Auth />} />
           <Route
