@@ -3,7 +3,7 @@ import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CreditCard, Wrench, FileText, Phone, Mail, LogOut } from "lucide-react";
+import { CreditCard, Wrench, FileText, Phone, Mail, LogOut, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,9 +27,46 @@ const ResidentPortal = () => {
   const [leaseSubmitting, setLeaseSubmitting] = useState(false);
   const [maintenanceSubmitted, setMaintenanceSubmitted] = useState(false);
   const [leaseSubmitted, setLeaseSubmitted] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+
+  const handlePayRent = async () => {
+    if (!user) return;
+    
+    setPaymentLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('get_tenant_lease_by_user', {
+        lookup_user_id: user.id
+      });
+
+      if (error) throw error;
+
+      const leaseData = data as { access_token: string; lease_id: string; property_address: string; tenant_id: string } | null;
+
+      if (!leaseData || !leaseData.access_token) {
+        toast({
+          title: "No Active Lease Found",
+          description: "We couldn't find an active lease linked to your account. Please contact management.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Redirect to the enterprise tenant portal
+      navigate(`/pay/${leaseData.access_token}`);
+    } catch (error: any) {
+      console.error("Payment lookup error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load payment portal. Please try again or contact management.",
+        variant: "destructive",
+      });
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
 
   const handleLogout = async () => {
     await signOut();
@@ -181,9 +218,16 @@ const ResidentPortal = () => {
                 <p className="text-muted-foreground mb-6">
                   Make a secure payment using our Stripe-powered portal. A small service fee applies.
                 </p>
-                <a href="https://buy.stripe.com/8wM9AO4JIduX96gcN7" target="_blank" rel="noopener noreferrer">
-                  <Button className="w-full">Pay Rent</Button>
-                </a>
+                <Button className="w-full" onClick={handlePayRent} disabled={paymentLoading}>
+                  {paymentLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    "Pay Rent"
+                  )}
+                </Button>
               </div>
 
               {/* Maintenance */}

@@ -162,6 +162,7 @@ export type Database = {
           name: string
           stripe_customer_id: string | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           access_token?: string | null
@@ -171,6 +172,7 @@ export type Database = {
           name: string
           stripe_customer_id?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           access_token?: string | null
@@ -180,6 +182,7 @@ export type Database = {
           name?: string
           stripe_customer_id?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -189,6 +192,10 @@ export type Database = {
     }
     Functions: {
       get_lease_details: { Args: { lookup_token: string }; Returns: Json }
+      get_tenant_lease_by_user: {
+        Args: { lookup_user_id: string }
+        Returns: Json
+      }
       get_tenant_payment_history: {
         Args: { lookup_token: string }
         Returns: Json
