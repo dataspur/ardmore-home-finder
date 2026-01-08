@@ -23,6 +23,7 @@ import Auth from "./pages/Auth";
 import AdminLogin from "./pages/AdminLogin";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/admin/Dashboard";
+import Messages from "./pages/admin/Messages";
 import Tenants from "./pages/admin/Tenants";
 import Leases from "./pages/admin/Leases";
 import Payments from "./pages/admin/Payments";
@@ -71,6 +72,7 @@ const App = () => (
             }
           >
             <Route index element={<Dashboard />} />
+            <Route path="messages" element={<Messages />} />
             <Route path="tenants" element={<Tenants />} />
             <Route path="leases" element={<Leases />} />
             <Route path="payments" element={<Payments />} />
