@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, Building2, Calendar, DollarSign, User } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { AlertCircle, Building2, Calendar, DollarSign, User, Loader2 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
 interface LeaseDetails {
@@ -36,6 +37,8 @@ export default function TenantPay() {
   const [leaseDetails, setLeaseDetails] = useState<LeaseDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadingPayment, setLoadingPayment] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchLeaseDetails = async () => {
@@ -72,6 +75,36 @@ export default function TenantPay() {
 
     fetchLeaseDetails();
   }, [token]);
+
+  const handlePayment = async () => {
+    if (!leaseDetails) return;
+
+    setLoadingPayment(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: {
+          lease_id: leaseDetails.lease_id,
+          return_url: window.location.href,
+        },
+      });
+
+      if (error || !data?.url) {
+        throw new Error("Failed to initialize payment");
+      }
+
+      // Redirect to Stripe Checkout
+      window.location.href = data.url;
+    } catch (err) {
+      console.error("Payment error:", err);
+      toast({
+        variant: "destructive",
+        title: "Payment Failed",
+        description: "Payment initialization failed. Please try again.",
+      });
+      setLoadingPayment(false);
+    }
+  };
 
   // Loading State
   if (isLoading) {
@@ -183,9 +216,20 @@ export default function TenantPay() {
             </div>
           </div>
 
-          {/* Pay Button - Disabled for Phase 1 */}
-          <Button className="w-full h-12 text-lg font-semibold" disabled>
-            Pay Rent Now
+          {/* Pay Button */}
+          <Button 
+            className="w-full h-12 text-lg font-semibold" 
+            onClick={handlePayment}
+            disabled={loadingPayment}
+          >
+            {loadingPayment ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              "Pay Rent Now"
+            )}
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
