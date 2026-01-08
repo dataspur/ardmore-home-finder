@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { Wrench, FileText, Mail, Check, Eye, Send, Users } from "lucide-react";
+import { Wrench, FileText, Mail, Check, Eye, Send, Users, Reply, Loader2, MessageCircle } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -63,12 +64,22 @@ interface SentMessage {
   recipient_count: number;
 }
 
+interface MessageReply {
+  id: string;
+  body: string;
+  created_at: string;
+  tenant_id: string;
+  is_read_by_admin: boolean;
+  tenants?: { name: string; email: string };
+}
+
 export default function Messages() {
   const [filterType, setFilterType] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [selectedMessage, setSelectedMessage] = useState<FormSubmission | null>(null);
   const [selectedSentMessage, setSelectedSentMessage] = useState<SentMessage | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
+  const [replyText, setReplyText] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -124,6 +135,30 @@ export default function Messages() {
     },
   });
 
+  // Fetch replies for selected sent message
+  const { data: messageReplies } = useQuery({
+    queryKey: ["message-replies", selectedSentMessage?.id],
+    queryFn: async () => {
+      if (!selectedSentMessage?.id) return [];
+      const { data, error } = await supabase
+        .from("message_replies")
+        .select(`
+          id,
+          body,
+          created_at,
+          tenant_id,
+          is_read_by_admin,
+          tenants (name, email)
+        `)
+        .eq("message_id", selectedSentMessage.id)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      return data as unknown as MessageReply[];
+    },
+    enabled: !!selectedSentMessage?.id,
+  });
+
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: SubmissionStatus }) => {
       const { error } = await supabase
@@ -134,10 +169,44 @@ export default function Messages() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["form_submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-unread-counts"] });
       toast({ title: "Status updated successfully" });
     },
     onError: () => {
       toast({ variant: "destructive", title: "Failed to update status" });
+    },
+  });
+
+  const replyToSubmissionMutation = useMutation({
+    mutationFn: async ({ submissionId, reply }: { submissionId: string; reply: string }) => {
+      const { error } = await supabase.functions.invoke("reply-to-submission", {
+        body: { submission_id: submissionId, reply },
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["form_submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-unread-counts"] });
+      setReplyText("");
+      setSelectedMessage(null);
+      toast({ title: "Reply sent successfully" });
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Failed to send reply", description: error.message });
+    },
+  });
+
+  const markRepliesAsReadMutation = useMutation({
+    mutationFn: async (messageId: string) => {
+      const { error } = await supabase
+        .from("message_replies")
+        .update({ is_read_by_admin: true })
+        .eq("message_id", messageId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["message-replies"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-unread-counts"] });
     },
   });
 
@@ -150,7 +219,14 @@ export default function Messages() {
     };
   };
 
+  const handleViewSentMessage = (msg: SentMessage) => {
+    setSelectedSentMessage(msg);
+    // Mark replies as read when viewing
+    markRepliesAsReadMutation.mutate(msg.id);
+  };
+
   const pendingCount = messages?.filter(m => m.status === "pending").length || 0;
+  const unreadRepliesCount = messageReplies?.filter(r => !r.is_read_by_admin).length || 0;
 
   return (
     <div className="space-y-6">
@@ -271,7 +347,10 @@ export default function Messages() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => setSelectedMessage(message)}
+                              onClick={() => {
+                                setSelectedMessage(message);
+                                setReplyText("");
+                              }}
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
@@ -303,19 +382,20 @@ export default function Messages() {
                   <TableHead>Subject</TableHead>
                   <TableHead className="w-[150px]">Recipients</TableHead>
                   <TableHead className="w-[120px]">Date</TableHead>
+                  <TableHead className="w-[100px]">Replies</TableHead>
                   <TableHead className="w-[80px]">View</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {sentLoading ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8">
+                    <TableCell colSpan={5} className="text-center py-8">
                       Loading sent messages...
                     </TableCell>
                   </TableRow>
                 ) : sentMessages?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       No sent messages yet
                     </TableCell>
                   </TableRow>
@@ -341,10 +421,13 @@ export default function Messages() {
                         {format(new Date(msg.created_at), "MMM d, yyyy")}
                       </TableCell>
                       <TableCell>
+                        <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                      </TableCell>
+                      <TableCell>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setSelectedSentMessage(msg)}
+                          onClick={() => handleViewSentMessage(msg)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -358,9 +441,9 @@ export default function Messages() {
         </TabsContent>
       </Tabs>
 
-      {/* Message Detail Dialog */}
+      {/* Message Detail Dialog with Reply */}
       <Dialog open={!!selectedMessage} onOpenChange={() => setSelectedMessage(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {selectedMessage && formTypeIcons[selectedMessage.form_type]}
@@ -399,14 +482,57 @@ export default function Messages() {
                   </div>
                 ))}
               </div>
+
+              {/* Admin reply section */}
+              {(selectedMessage as any).admin_reply ? (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Your Reply</p>
+                  <div className="border-l-4 border-primary pl-4 py-2 bg-primary/5 rounded-r-lg">
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Sent on {format(new Date((selectedMessage as any).admin_reply_at), "MMM d 'at' h:mm a")}
+                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{(selectedMessage as any).admin_reply}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2 pt-2 border-t">
+                  <p className="text-sm font-medium">Reply via Email</p>
+                  <Textarea
+                    placeholder="Type your reply..."
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    rows={3}
+                  />
+                  <Button
+                    onClick={() => replyToSubmissionMutation.mutate({ 
+                      submissionId: selectedMessage.id, 
+                      reply: replyText 
+                    })}
+                    disabled={!replyText.trim() || replyToSubmissionMutation.isPending}
+                    className="w-full"
+                  >
+                    {replyToSubmissionMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Reply className="h-4 w-4 mr-2" />
+                        Send Reply
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Sent Message Detail Dialog */}
+      {/* Sent Message Detail Dialog with Replies */}
       <Dialog open={!!selectedSentMessage} onOpenChange={() => setSelectedSentMessage(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selectedSentMessage?.subject}</DialogTitle>
           </DialogHeader>
@@ -424,6 +550,29 @@ export default function Messages() {
               <p className="text-sm text-muted-foreground">
                 Sent to {selectedSentMessage.recipient_count} recipient(s)
               </p>
+
+              {/* Tenant replies */}
+              {messageReplies && messageReplies.length > 0 && (
+                <div className="space-y-3 pt-2 border-t">
+                  <p className="text-sm font-medium flex items-center gap-2">
+                    <MessageCircle className="h-4 w-4" />
+                    Tenant Replies ({messageReplies.length})
+                  </p>
+                  {messageReplies.map((reply) => (
+                    <div key={reply.id} className="border-l-4 border-secondary pl-4 py-2 bg-secondary/30 rounded-r-lg">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs font-medium">
+                          {reply.tenants?.name || "Unknown"} ({reply.tenants?.email})
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(reply.created_at), "MMM d 'at' h:mm a")}
+                        </p>
+                      </div>
+                      <p className="whitespace-pre-wrap text-sm">{reply.body}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

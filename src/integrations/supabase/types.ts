@@ -46,31 +46,37 @@ export type Database = {
       }
       form_submissions: {
         Row: {
+          admin_reply: string | null
+          admin_reply_at: string | null
           created_at: string
           data: Json
           form_type: Database["public"]["Enums"]["form_type"]
           id: string
           status: Database["public"]["Enums"]["submission_status"]
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
+          admin_reply?: string | null
+          admin_reply_at?: string | null
           created_at?: string
           data: Json
           form_type: Database["public"]["Enums"]["form_type"]
           id?: string
           status?: Database["public"]["Enums"]["submission_status"]
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
+          admin_reply?: string | null
+          admin_reply_at?: string | null
           created_at?: string
           data?: Json
           form_type?: Database["public"]["Enums"]["form_type"]
           id?: string
           status?: Database["public"]["Enums"]["submission_status"]
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -162,6 +168,48 @@ export type Database = {
           },
           {
             foreignKeyName: "message_recipients_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_replies: {
+        Row: {
+          body: string
+          created_at: string | null
+          id: string
+          is_read_by_admin: boolean | null
+          message_id: string
+          tenant_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          id?: string
+          is_read_by_admin?: boolean | null
+          message_id: string
+          tenant_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          id?: string
+          is_read_by_admin?: boolean | null
+          message_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_replies_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "admin_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_replies_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
