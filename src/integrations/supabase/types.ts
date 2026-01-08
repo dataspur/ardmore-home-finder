@@ -285,6 +285,75 @@ export type Database = {
         }
         Relationships: []
       }
+      properties: {
+        Row: {
+          address: string
+          badge: string | null
+          bathrooms: number | null
+          bedrooms: number | null
+          city: string | null
+          created_at: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          is_featured: boolean | null
+          latitude: number | null
+          longitude: number | null
+          price_cents: number
+          price_display: string
+          property_type: string
+          size_sqft: number | null
+          state: string | null
+          title: string
+          updated_at: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          address: string
+          badge?: string | null
+          bathrooms?: number | null
+          bedrooms?: number | null
+          city?: string | null
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          price_cents: number
+          price_display: string
+          property_type: string
+          size_sqft?: number | null
+          state?: string | null
+          title: string
+          updated_at?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string
+          badge?: string | null
+          bathrooms?: number | null
+          bedrooms?: number | null
+          city?: string | null
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          price_cents?: number
+          price_display?: string
+          property_type?: string
+          size_sqft?: number | null
+          state?: string | null
+          title?: string
+          updated_at?: string | null
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
       tenants: {
         Row: {
           access_token: string | null
