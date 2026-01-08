@@ -1,24 +1,26 @@
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { Home } from "lucide-react";
+import sale1Img from "@/assets/sale-1.png";
+import sale2Img from "@/assets/sale-2.png";
+import sale3Img from "@/assets/sale-3.png";
 
 const forSaleListings = [
   {
     id: 1,
-    image: "/images/for-sale-1.jpg",
+    image: sale1Img,
     title: "3 Bed / 2 Bath – Forest Ln.",
     text: "$215,000 · 1,700 sq ft",
   },
   {
     id: 2,
-    image: "/images/for-sale-2.jpg",
+    image: sale2Img,
     title: "2 Bed / 2 Bath – East Main",
     text: "$179,000 · 1,300 sq ft",
   },
   {
     id: 3,
-    image: "/images/for-sale-3.jpg",
+    image: sale3Img,
     title: "4 Bed / 3 Bath – Willow Way",
     text: "$249,000 · 2,100 sq ft",
   },
@@ -48,8 +50,12 @@ const ForSale = () => {
                   key={listing.id} 
                   className="bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-elevated transition-all duration-300 hover:-translate-y-1"
                 >
-                  <div className="h-48 bg-muted flex items-center justify-center">
-                    <Home className="w-16 h-16 text-muted-foreground/30" />
+                  <div className="h-48 overflow-hidden">
+                    <img 
+                      src={listing.image} 
+                      alt={listing.title} 
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <div className="p-6">
                     <h3 className="text-xl font-bold text-foreground mb-2">{listing.title}</h3>
