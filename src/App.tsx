@@ -12,6 +12,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import ResidentPortal from "./pages/ResidentPortal";
 import TenantPay from "./pages/TenantPay";
+import PaymentSuccess from "./pages/PaymentSuccess";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -36,6 +37,7 @@ const App = () => (
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/pay/:token" element={<TenantPay />} />
+          <Route path="/success" element={<PaymentSuccess />} />
           <Route path="/auth" element={<Auth />} />
           <Route
             path="/resident-portal"
