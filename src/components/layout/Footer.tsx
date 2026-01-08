@@ -1,7 +1,7 @@
 import { forwardRef } from "react";
 import { Link } from "react-router-dom";
 import { Phone, Mail, MapPin } from "lucide-react";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo.svg";
 const Footer = forwardRef<HTMLElement>((_, ref) => {
   return <footer ref={ref} className="bg-foreground text-primary-foreground">
       <div className="container mx-auto px-4 py-16">
