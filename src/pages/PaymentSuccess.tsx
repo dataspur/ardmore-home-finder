@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo.svg";
 
 export default function PaymentSuccess() {
   return (
