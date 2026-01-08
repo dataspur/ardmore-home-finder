@@ -1,6 +1,8 @@
+import { useState, useEffect } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
+import PropertyInquiryDialog from "@/components/PropertyInquiryDialog";
 import sale1Img from "@/assets/sale-1.png";
 import sale2Img from "@/assets/sale-2.png";
 import sale3Img from "@/assets/sale-3.png";
@@ -27,6 +29,12 @@ const forSaleListings = [
 ];
 
 const ForSale = () => {
+  const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.title = "Homes for Sale | Precision Capital";
+  }, []);
+
   return (
     <div className="min-h-screen bg-background animate-fade-in">
       <Navbar />
@@ -60,7 +68,13 @@ const ForSale = () => {
                   <div className="p-6">
                     <h3 className="text-xl font-bold text-foreground mb-2">{listing.title}</h3>
                     <p className="text-muted-foreground mb-6">{listing.text}</p>
-                    <Button className="w-full" variant="outline">Learn More</Button>
+                    <Button 
+                      className="w-full" 
+                      variant="outline"
+                      onClick={() => setSelectedProperty(listing.title)}
+                    >
+                      Learn More
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -69,6 +83,12 @@ const ForSale = () => {
         </section>
       </main>
       <Footer />
+
+      <PropertyInquiryDialog
+        open={!!selectedProperty}
+        onOpenChange={(open) => !open && setSelectedProperty(null)}
+        propertyTitle={selectedProperty || ""}
+      />
     </div>
   );
 };

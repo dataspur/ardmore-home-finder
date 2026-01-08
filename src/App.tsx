@@ -7,11 +7,14 @@ import ScrollToTop from "@/components/layout/ScrollToTop";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import CookieConsent from "@/components/CookieConsent";
 import Index from "./pages/Index";
 import Rentals from "./pages/Rentals";
 import ForSale from "./pages/ForSale";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Terms from "./pages/Terms";
 import ResidentPortal from "./pages/ResidentPortal";
 import TenantPay from "./pages/TenantPay";
 import PaymentSuccess from "./pages/PaymentSuccess";
@@ -42,6 +45,8 @@ const App = () => (
           <Route path="/for-sale" element={<ForSale />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="/pay/:token" element={<TenantPay />} />
           <Route path="/success" element={<PaymentSuccess />} />
           <Route path="/auth" element={<Auth />} />
@@ -68,6 +73,7 @@ const App = () => (
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <CookieConsent />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
