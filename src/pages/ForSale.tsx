@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import PropertyInquiryDialog from "@/components/PropertyInquiryDialog";
+import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import sale1Img from "@/assets/sale-1.png";
 import sale2Img from "@/assets/sale-2.png";
 import sale3Img from "@/assets/sale-3.png";
@@ -12,21 +14,73 @@ const forSaleListings = [
     id: 1,
     image: sale1Img,
     title: "3 Bed / 2 Bath – Forest Ln.",
-    text: "$215,000 · 1,700 sq ft",
+    price: "$215,000",
+    size: "1,700 sq ft",
+    badge: "For Sale",
   },
   {
     id: 2,
     image: sale2Img,
     title: "2 Bed / 2 Bath – East Main",
-    text: "$179,000 · 1,300 sq ft",
+    price: "$179,000",
+    size: "1,300 sq ft",
+    badge: "Featured",
   },
   {
     id: 3,
     image: sale3Img,
     title: "4 Bed / 3 Bath – Willow Way",
-    text: "$249,000 · 2,100 sq ft",
+    price: "$249,000",
+    size: "2,100 sq ft",
+    badge: "For Sale",
   },
 ];
+
+const PropertyCard = ({ 
+  listing, 
+  index, 
+  onLearnMore 
+}: { 
+  listing: typeof forSaleListings[0]; 
+  index: number;
+  onLearnMore: (title: string) => void;
+}) => {
+  const { ref, isVisible } = useScrollAnimation();
+
+  return (
+    <div 
+      ref={ref}
+      className={`bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-elevated transition-all duration-500 hover:-translate-y-2 group ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+      style={{ transitionDelay: `${index * 100}ms` }}
+    >
+      <div className="h-56 overflow-hidden relative">
+        <Badge 
+          className={`absolute top-4 left-4 z-10 ${listing.badge === "Featured" ? "bg-accent text-accent-foreground" : "bg-primary text-primary-foreground"}`}
+        >
+          {listing.badge}
+        </Badge>
+        <img 
+          src={listing.image} 
+          alt={listing.title} 
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          loading="lazy"
+        />
+      </div>
+      <div className="p-6">
+        <h3 className="font-heading text-h3 text-foreground mb-2">{listing.title}</h3>
+        <p className="font-heading text-price text-primary mb-1">{listing.price}</p>
+        <p className="font-body text-muted-foreground mb-6">{listing.size}</p>
+        <Button 
+          className="w-full min-h-[44px]" 
+          variant="outline"
+          onClick={() => onLearnMore(listing.title)}
+        >
+          Learn More
+        </Button>
+      </div>
+    </div>
+  );
+};
 
 const ForSale = () => {
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
@@ -36,14 +90,14 @@ const ForSale = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background animate-fade-in">
+    <div className="min-h-screen bg-background">
       <Navbar />
       <main className="pt-20">
         {/* Hero */}
         <section className="py-16 bg-primary text-primary-foreground">
           <div className="container mx-auto px-4 text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Homes for Sale</h1>
-            <p className="text-lg text-primary-foreground/80 max-w-2xl mx-auto">
+            <h1 className="font-heading text-h1-mobile md:text-h1 mb-4 hero-text-shadow">Homes for Sale</h1>
+            <p className="font-body text-body-lg text-primary-foreground/80 max-w-2xl mx-auto">
               Browse available properties in the Ardmore area.
             </p>
           </div>
@@ -53,30 +107,13 @@ const ForSale = () => {
         <section className="py-16">
           <div className="container mx-auto px-4">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {forSaleListings.map((listing) => (
-                <div 
+              {forSaleListings.map((listing, index) => (
+                <PropertyCard 
                   key={listing.id} 
-                  className="bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-elevated transition-all duration-300 hover:-translate-y-1"
-                >
-                  <div className="h-48 overflow-hidden">
-                    <img 
-                      src={listing.image} 
-                      alt={listing.title} 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold text-foreground mb-2">{listing.title}</h3>
-                    <p className="text-muted-foreground mb-6">{listing.text}</p>
-                    <Button 
-                      className="w-full" 
-                      variant="outline"
-                      onClick={() => setSelectedProperty(listing.title)}
-                    >
-                      Learn More
-                    </Button>
-                  </div>
-                </div>
+                  listing={listing} 
+                  index={index}
+                  onLearnMore={setSelectedProperty}
+                />
               ))}
             </div>
           </div>

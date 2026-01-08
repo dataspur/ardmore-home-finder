@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Home, Key } from "lucide-react";
+import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 
 const features = [
   {
@@ -18,23 +19,25 @@ const features = [
 ];
 
 const FeatureCards = () => {
+  const { ref, isVisible } = useScrollAnimation();
+
   return (
     <section className="py-20 bg-secondary">
       <div className="container mx-auto px-4">
-        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        <div ref={ref} className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {features.map((feature, index) => (
             <div
               key={feature.title}
-              className="bg-card rounded-2xl p-8 shadow-card hover:shadow-elevated transition-all duration-300 hover:-translate-y-1 group"
-              style={{ animationDelay: `${index * 0.1}s` }}
+              className={`bg-card rounded-2xl p-8 shadow-card hover:shadow-elevated transition-all duration-500 hover:-translate-y-2 group ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+              style={{ transitionDelay: `${index * 150}ms` }}
             >
-              <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
+              <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary/20 group-hover:scale-110 transition-all duration-300">
                 <feature.icon className="w-7 h-7 text-primary" />
               </div>
-              <h3 className="text-2xl font-bold text-foreground mb-3">
+              <h3 className="font-heading text-h3 text-foreground mb-3">
                 {feature.title}
               </h3>
-              <p className="text-muted-foreground mb-6 leading-relaxed">
+              <p className="font-body text-muted-foreground mb-6 leading-relaxed">
                 {feature.description}
               </p>
               <Link to={feature.button.href}>

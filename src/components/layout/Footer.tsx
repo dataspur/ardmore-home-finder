@@ -1,30 +1,62 @@
 import { forwardRef } from "react";
 import { Link } from "react-router-dom";
-import { Phone, Mail, MapPin } from "lucide-react";
+import { Phone, Mail, MapPin, Facebook, Instagram, Linkedin } from "lucide-react";
 import logo from "@/assets/logo.svg";
+
 const Footer = forwardRef<HTMLElement>((_, ref) => {
-  return <footer ref={ref} className="bg-foreground text-primary-foreground">
+  return (
+    <footer ref={ref} className="bg-foreground text-primary-foreground">
       <div className="container mx-auto px-4 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Logo & Description */}
           <div className="lg:col-span-1">
             <img src={logo} alt="Precision Capital" className="h-10 w-auto mb-4 brightness-0 invert object-scale-down" />
-            <p className="text-primary-foreground/70 text-sm leading-relaxed">
+            <p className="font-body text-footer text-primary-foreground/70 leading-relaxed">
               A family-owned real estate company bringing quality homes to Ardmore, Oklahoma.
             </p>
+            {/* Social Media Icons */}
+            <div className="flex gap-4 mt-6">
+              <a 
+                href="https://facebook.com/precisioncapital" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                aria-label="Facebook"
+                className="w-10 h-10 rounded-full bg-primary-foreground/10 flex items-center justify-center hover:bg-primary-foreground/20 transition-colors"
+              >
+                <Facebook className="w-5 h-5" />
+              </a>
+              <a 
+                href="https://instagram.com/precisioncapital" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+                className="w-10 h-10 rounded-full bg-primary-foreground/10 flex items-center justify-center hover:bg-primary-foreground/20 transition-colors"
+              >
+                <Instagram className="w-5 h-5" />
+              </a>
+              <a 
+                href="https://linkedin.com/company/precisioncapital" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                aria-label="LinkedIn"
+                className="w-10 h-10 rounded-full bg-primary-foreground/10 flex items-center justify-center hover:bg-primary-foreground/20 transition-colors"
+              >
+                <Linkedin className="w-5 h-5" />
+              </a>
+            </div>
           </div>
 
           {/* Company Links */}
           <div>
-            <h4 className="font-semibold text-lg mb-4">Company</h4>
+            <h4 className="font-heading text-footer-heading mb-4">Company</h4>
             <ul className="space-y-3">
               <li>
-                <Link to="/about" className="text-primary-foreground/70 hover:text-primary-foreground transition-colors">
+                <Link to="/about" className="font-body text-footer text-primary-foreground/70 hover:text-primary-foreground transition-colors">
                   About Us
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="text-primary-foreground/70 hover:text-primary-foreground transition-colors">
+                <Link to="/contact" className="font-body text-footer text-primary-foreground/70 hover:text-primary-foreground transition-colors">
                   Contact
                 </Link>
               </li>
@@ -33,20 +65,20 @@ const Footer = forwardRef<HTMLElement>((_, ref) => {
 
           {/* Properties Links */}
           <div>
-            <h4 className="font-semibold text-lg mb-4">Properties</h4>
+            <h4 className="font-heading text-footer-heading mb-4">Properties</h4>
             <ul className="space-y-3">
               <li>
-                <Link to="/rentals" className="text-primary-foreground/70 hover:text-primary-foreground transition-colors">
+                <Link to="/rentals" className="font-body text-footer text-primary-foreground/70 hover:text-primary-foreground transition-colors">
                   Rentals
                 </Link>
               </li>
               <li>
-                <Link to="/for-sale" className="text-primary-foreground/70 hover:text-primary-foreground transition-colors">
+                <Link to="/for-sale" className="font-body text-footer text-primary-foreground/70 hover:text-primary-foreground transition-colors">
                   Homes for Sale
                 </Link>
               </li>
               <li>
-                <Link to="/resident-portal" className="text-primary-foreground/70 hover:text-primary-foreground transition-colors">
+                <Link to="/resident-portal" className="font-body text-footer text-primary-foreground/70 hover:text-primary-foreground transition-colors">
                   Resident Portal
                 </Link>
               </li>
@@ -55,23 +87,23 @@ const Footer = forwardRef<HTMLElement>((_, ref) => {
 
           {/* Contact Info */}
           <div>
-            <h4 className="font-semibold text-lg mb-4">Get in Touch</h4>
+            <h4 className="font-heading text-footer-heading mb-4">Get in Touch</h4>
             <ul className="space-y-3">
               <li className="flex items-center gap-3 text-primary-foreground/70">
                 <Phone size={18} />
-                <a href="tel:+15803990001" className="hover:text-primary-foreground transition-colors">
+                <a href="tel:+15803990001" className="font-body text-footer hover:text-primary-foreground transition-colors min-h-[44px] flex items-center">
                   (580) 399-0001
                 </a>
               </li>
               <li className="flex items-center gap-3 text-primary-foreground/70">
                 <Mail size={18} />
-                <a href="mailto:management@precisioncapital.homes" className="hover:text-primary-foreground transition-colors">
+                <a href="mailto:management@precisioncapital.homes" className="font-body text-footer hover:text-primary-foreground transition-colors">
                   management@precisioncapital.homes
                 </a>
               </li>
               <li className="flex items-start gap-3 text-primary-foreground/70">
                 <MapPin size={18} className="mt-1 flex-shrink-0" />
-                <span>Ardmore, Oklahoma</span>
+                <span className="font-body text-footer">Ardmore, Oklahoma</span>
               </li>
             </ul>
           </div>
@@ -80,10 +112,19 @@ const Footer = forwardRef<HTMLElement>((_, ref) => {
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-primary-foreground/10">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-primary-foreground/50 text-sm">
-              © {new Date().getFullYear()} Precision Capital. All rights reserved.
-            </p>
-            <div className="flex gap-6 text-sm">
+            <div className="flex items-center gap-4">
+              <p className="font-body text-footer text-primary-foreground/50">
+                © {new Date().getFullYear()} Precision Capital. All rights reserved.
+              </p>
+              {/* Equal Housing Logo */}
+              <div className="flex items-center gap-2 text-primary-foreground/50">
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L2 7v2h20V7L12 2zm0 2.5L18.5 7h-13L12 4.5zM4 11v11h16V11H4zm2 2h12v7H6v-7z"/>
+                </svg>
+                <span className="text-xs font-body">Equal Housing Opportunity</span>
+              </div>
+            </div>
+            <div className="flex gap-6 text-footer font-body">
               <Link to="/privacy" className="text-primary-foreground/50 hover:text-primary-foreground transition-colors">
                 Privacy Policy
               </Link>
@@ -94,7 +135,9 @@ const Footer = forwardRef<HTMLElement>((_, ref) => {
           </div>
         </div>
       </div>
-    </footer>;
+    </footer>
+  );
 });
+
 Footer.displayName = "Footer";
 export default Footer;

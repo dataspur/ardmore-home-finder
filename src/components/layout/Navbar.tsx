@@ -24,17 +24,17 @@ const Navbar = () => {
             <img 
               src={logo} 
               alt="Precision Capital" 
-              className="h-12 w-auto"
+              className="h-14 w-auto"
             />
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-1">
+          <div className="hidden lg:flex items-center gap-2">
             {navLinks.map((link) => (
               <Link key={link.href} to={link.href}>
                 <Button 
                   variant="nav" 
-                  className={location.pathname === link.href ? "text-primary" : ""}
+                  className={`text-nav relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-primary after:transition-all after:duration-300 hover:after:w-full ${location.pathname === link.href ? "text-primary after:w-full" : ""}`}
                 >
                   {link.text}
                 </Button>
@@ -53,7 +53,7 @@ const Navbar = () => {
 
           {/* Mobile Menu Button */}
           <button
-            className="lg:hidden p-2 text-foreground"
+            className="lg:hidden p-2 text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center"
             onClick={() => setIsOpen(!isOpen)}
             aria-label="Toggle menu"
           >
@@ -73,14 +73,14 @@ const Navbar = () => {
                 >
                   <Button 
                     variant="ghost" 
-                    className={`w-full justify-start ${location.pathname === link.href ? "text-primary bg-primary/5" : ""}`}
+                    className={`w-full justify-start min-h-[44px] font-heading font-semibold text-nav ${location.pathname === link.href ? "text-primary bg-primary/5" : ""}`}
                   >
                     {link.text}
                   </Button>
                 </Link>
               ))}
               <Link to="/resident-portal" onClick={() => setIsOpen(false)}>
-                <Button variant="default" className="w-full mt-2">
+                <Button variant="default" className="w-full mt-2 min-h-[44px]">
                   Resident Login
                 </Button>
               </Link>
