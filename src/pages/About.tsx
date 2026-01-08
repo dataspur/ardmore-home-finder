@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Check, Phone, Building } from "lucide-react";
@@ -11,6 +12,10 @@ const whyChooseUs = [
 ];
 
 const About = () => {
+  useEffect(() => {
+    document.title = "About Us | Precision Capital";
+  }, []);
+
   return (
     <div className="min-h-screen bg-background animate-fade-in">
       <Navbar />

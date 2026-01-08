@@ -65,11 +65,15 @@ const Footer = forwardRef<HTMLElement>((_, ref) => {
             <ul className="space-y-3">
               <li className="flex items-center gap-3 text-primary-foreground/70">
                 <Phone size={18} />
-                <span>(580) 555-1234</span>
+                <a href="tel:+15803990001" className="hover:text-primary-foreground transition-colors">
+                  (580) 399-0001
+                </a>
               </li>
               <li className="flex items-center gap-3 text-primary-foreground/70">
                 <Mail size={18} />
-                <span>info@precisioncapital.com</span>
+                <a href="mailto:management@precisioncapital.homes" className="hover:text-primary-foreground transition-colors">
+                  management@precisioncapital.homes
+                </a>
               </li>
               <li className="flex items-start gap-3 text-primary-foreground/70">
                 <MapPin size={18} className="mt-1 flex-shrink-0" />
@@ -81,9 +85,19 @@ const Footer = forwardRef<HTMLElement>((_, ref) => {
 
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-primary-foreground/10">
-          <p className="text-center text-primary-foreground/50 text-sm">
-            © {new Date().getFullYear()} Precision Capital. All rights reserved.
-          </p>
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-primary-foreground/50 text-sm">
+              © {new Date().getFullYear()} Precision Capital. All rights reserved.
+            </p>
+            <div className="flex gap-6 text-sm">
+              <Link to="/privacy" className="text-primary-foreground/50 hover:text-primary-foreground transition-colors">
+                Privacy Policy
+              </Link>
+              <Link to="/terms" className="text-primary-foreground/50 hover:text-primary-foreground transition-colors">
+                Terms of Service
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </footer>
