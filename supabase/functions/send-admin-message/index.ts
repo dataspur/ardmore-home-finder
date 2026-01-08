@@ -22,6 +22,16 @@ interface Tenant {
   email: string;
 }
 
+// SECURITY: HTML escape function to prevent XSS in emails
+const escapeHtml = (text: string): string => {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -119,6 +129,10 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Recipient records created");
 
+    // SECURITY: Sanitize user input before embedding in HTML emails
+    const sanitizedSubject = escapeHtml(subject);
+    const sanitizedBody = escapeHtml(body);
+
     // Send emails to all tenants
     const emailPromises = tenants.map(tenant => 
       resend.emails.send({
@@ -131,9 +145,9 @@ const handler = async (req: Request): Promise<Response> => {
               <h1 style="color: white; margin: 0;">Precision Capital Management</h1>
             </div>
             <div style="padding: 30px; background-color: #f9f9f9;">
-              <h2 style="color: #1e3a5f; margin-top: 0;">${subject}</h2>
+              <h2 style="color: #1e3a5f; margin-top: 0;">${sanitizedSubject}</h2>
               <div style="border-left: 4px solid #1e3a5f; padding-left: 20px; margin: 20px 0;">
-                <p style="color: #333; line-height: 1.6; white-space: pre-wrap;">${body}</p>
+                <p style="color: #333; line-height: 1.6; white-space: pre-wrap;">${sanitizedBody}</p>
               </div>
               <p style="color: #666; font-size: 14px; margin-top: 30px;">
                 Log in to your <a href="https://precisioncapital.homes/resident-portal" style="color: #1e3a5f;">Resident Portal</a> to view this message and more.

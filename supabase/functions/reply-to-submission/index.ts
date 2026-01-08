@@ -14,6 +14,16 @@ interface ReplyRequest {
   reply: string;
 }
 
+// SECURITY: HTML escape function to prevent XSS in emails
+const escapeHtml = (text: string): string => {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
+
 const handler = async (req: Request): Promise<Response> => {
   console.log("reply-to-submission function called");
 
@@ -93,6 +103,10 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Failed to save reply");
     }
 
+    // SECURITY: Sanitize user input before embedding in HTML emails
+    const sanitizedReply = escapeHtml(reply);
+    const sanitizedRecipientName = escapeHtml(recipientName);
+
     // Send email to the submitter
     console.log("Sending reply email to:", recipientEmail);
     const emailResponse = await resend.emails.send({
@@ -104,10 +118,10 @@ const handler = async (req: Request): Promise<Response> => {
           <h2 style="color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">
             Response from Precision Capital
           </h2>
-          <p>Hello ${recipientName},</p>
+          <p>Hello ${sanitizedRecipientName},</p>
           <p>Thank you for reaching out to us. Here is our response to your inquiry:</p>
           <div style="background: #f3f4f6; padding: 20px; border-left: 4px solid #2563eb; margin: 20px 0;">
-            <p style="white-space: pre-wrap; margin: 0;">${reply}</p>
+            <p style="white-space: pre-wrap; margin: 0;">${sanitizedReply}</p>
           </div>
           <p>If you have any further questions, please don't hesitate to contact us:</p>
           <ul>

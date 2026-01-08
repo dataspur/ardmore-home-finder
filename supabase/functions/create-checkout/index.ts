@@ -14,7 +14,8 @@ serve(async (req) => {
   }
 
   try {
-    const { lease_id, return_url } = await req.json();
+    // SECURITY: Validate access token from request
+    const { lease_id, return_url, access_token } = await req.json();
 
     if (!lease_id || !return_url) {
       throw new Error("Missing required fields: lease_id and return_url");
@@ -39,6 +40,44 @@ serve(async (req) => {
     if (leaseError || !lease) {
       console.error("Lease fetch error:", leaseError);
       throw new Error("Lease not found or inactive");
+    }
+
+    // SECURITY: Verify the access token matches the tenant who owns this lease
+    const { data: tenant, error: tenantError } = await supabaseAdmin
+      .from("tenants")
+      .select("id, access_token")
+      .eq("id", lease.tenant_id)
+      .single();
+
+    if (tenantError || !tenant) {
+      console.error("Tenant fetch error:", tenantError);
+      throw new Error("Tenant not found");
+    }
+
+    // Validate access token matches (for token-based access like /pay/:token)
+    if (access_token && tenant.access_token !== access_token) {
+      console.error("Access token mismatch");
+      throw new Error("Unauthorized: Invalid access token");
+    }
+
+    // If no access token provided, require Authorization header
+    if (!access_token) {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        throw new Error("Unauthorized: Missing authentication");
+      }
+      
+      const token = authHeader.replace("Bearer ", "");
+      const { data: claims, error: claimsError } = await supabaseAdmin.auth.getUser(token);
+      
+      if (claimsError || !claims.user) {
+        throw new Error("Unauthorized: Invalid token");
+      }
+      
+      // Verify the authenticated user is the tenant owner
+      if (tenant.id !== lease.tenant_id) {
+        throw new Error("Unauthorized: Lease access denied");
+      }
     }
 
     console.log("Lease found:", { 
