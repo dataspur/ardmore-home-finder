@@ -1,20 +1,47 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Building2, Calendar, DollarSign, User, Loader2 } from "lucide-react";
-import logo from "@/assets/logo.png";
+import { AlertCircle, Loader2, CreditCard, MessageSquare, Mail } from "lucide-react";
+import logo from "@/assets/logo.svg";
+
+import { TenantPortalHeader } from "@/components/tenant/TenantPortalHeader";
+import { AccountSummaryCard } from "@/components/tenant/AccountSummaryCard";
+import { PropertyDetailsCard } from "@/components/tenant/PropertyDetailsCard";
+import { ChargesBreakdownCard } from "@/components/tenant/ChargesBreakdownCard";
+import { PaymentHistoryCard } from "@/components/tenant/PaymentHistoryCard";
+import { ReportIssueDialog } from "@/components/tenant/ReportIssueDialog";
+import { TenantPortalFooter } from "@/components/tenant/TenantPortalFooter";
 
 interface LeaseDetails {
   tenant_name: string;
+  tenant_email: string;
   property_address: string;
   rent_amount_cents: number;
+  late_fee_cents: number;
+  total_due_cents: number;
   due_date: string;
+  days_until_due: number;
+  is_past_due: boolean;
   lease_id: string;
   tenant_id: string;
+  lease_start_date?: string;
+  last_payment?: {
+    amount_cents: number;
+    paid_at: string;
+    status: string;
+  };
+}
+
+interface Payment {
+  id: string;
+  amount_cents: number;
+  status: string;
+  paid_at: string;
+  stripe_session_id?: string;
 }
 
 const formatCentsToDollars = (cents: number): string => {
@@ -24,24 +51,17 @@ const formatCentsToDollars = (cents: number): string => {
   });
 };
 
-const formatDate = (dateString: string): string => {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-};
-
 export default function TenantPay() {
   const { token } = useParams<{ token: string }>();
   const [leaseDetails, setLeaseDetails] = useState<LeaseDetails | null>(null);
+  const [paymentHistory, setPaymentHistory] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadingPayment, setLoadingPayment] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchLeaseDetails = async () => {
+    const fetchData = async () => {
       if (!token) {
         setError("No access token provided");
         setIsLoading(false);
@@ -49,22 +69,25 @@ export default function TenantPay() {
       }
 
       try {
-        const { data, error: rpcError } = await supabase.rpc("get_lease_details", {
-          lookup_token: token,
-        });
+        // Fetch lease details and payment history in parallel
+        const [leaseResponse, historyResponse] = await Promise.all([
+          supabase.rpc("get_lease_details", { lookup_token: token }),
+          supabase.rpc("get_tenant_payment_history", { lookup_token: token }),
+        ]);
 
-        if (rpcError) {
-          console.error("RPC Error:", rpcError);
+        if (leaseResponse.error) {
+          console.error("Lease RPC Error:", leaseResponse.error);
           setError("Unable to retrieve lease information");
           return;
         }
 
-        if (!data) {
+        if (!leaseResponse.data) {
           setError("Invalid or expired access link");
           return;
         }
 
-        setLeaseDetails(data as unknown as LeaseDetails);
+        setLeaseDetails(leaseResponse.data as unknown as LeaseDetails);
+        setPaymentHistory((historyResponse.data as unknown as Payment[]) || []);
       } catch (err) {
         console.error("Fetch error:", err);
         setError("An unexpected error occurred");
@@ -73,7 +96,7 @@ export default function TenantPay() {
       }
     };
 
-    fetchLeaseDetails();
+    fetchData();
   }, [token]);
 
   const handlePayment = async () => {
@@ -93,7 +116,6 @@ export default function TenantPay() {
         throw new Error("Failed to initialize payment");
       }
 
-      // Redirect to Stripe Checkout
       window.location.href = data.url;
     } catch (err) {
       console.error("Payment error:", err);
@@ -109,24 +131,21 @@ export default function TenantPay() {
   // Loading State
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center space-y-4">
-            <Skeleton className="h-12 w-48 mx-auto" />
-            <Skeleton className="h-6 w-32 mx-auto" />
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-3">
-              <Skeleton className="h-5 w-full" />
-              <Skeleton className="h-5 w-3/4" />
-            </div>
-            <div className="space-y-3">
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
-            </div>
-            <Skeleton className="h-12 w-full" />
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-background flex flex-col">
+        <div className="bg-gradient-hero text-white py-6">
+          <div className="max-w-4xl mx-auto px-4">
+            <Skeleton className="h-10 w-48 bg-white/20" />
+          </div>
+        </div>
+        <div className="flex-1 max-w-4xl mx-auto px-4 py-8 w-full">
+          <div className="grid md:grid-cols-2 gap-6">
+            <Skeleton className="h-48" />
+            <Skeleton className="h-48" />
+          </div>
+          <Skeleton className="h-40 mt-6" />
+          <Skeleton className="h-14 mt-6" />
+          <Skeleton className="h-48 mt-6" />
+        </div>
       </div>
     );
   }
@@ -140,7 +159,7 @@ export default function TenantPay() {
             <img src={logo} alt="Precision Capital" className="h-12 mx-auto" />
             <div className="flex items-center justify-center gap-2 text-destructive">
               <AlertCircle className="h-6 w-6" />
-              <CardTitle className="text-xl">Access Denied</CardTitle>
+              <h2 className="text-xl font-semibold">Access Denied</h2>
             </div>
           </CardHeader>
           <CardContent className="text-center space-y-4">
@@ -148,77 +167,55 @@ export default function TenantPay() {
             <p className="text-sm text-muted-foreground">
               Please contact management if you believe this is an error.
             </p>
-            <p className="text-sm font-medium">
-              <a href="mailto:management@precisioncapital.homes" className="text-primary hover:underline">
-                management@precisioncapital.homes
-              </a>
-            </p>
+            <a
+              href="mailto:management@precisioncapital.homes"
+              className="inline-block text-sm font-medium text-primary hover:underline"
+            >
+              management@precisioncapital.homes
+            </a>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  // Success State
+  // Success State - Full Portal
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-elevated">
-        <CardHeader className="text-center space-y-4 pb-2">
-          <img src={logo} alt="Precision Capital" className="h-12 mx-auto" />
-          <div>
-            <CardTitle className="text-2xl font-bold text-foreground">
-              Rent Payment Portal
-            </CardTitle>
-            <p className="text-muted-foreground text-sm mt-1">
-              Secure payment processing
-            </p>
-          </div>
-        </CardHeader>
+    <div className="min-h-screen bg-background flex flex-col">
+      <TenantPortalHeader />
 
-        <CardContent className="space-y-6">
-          {/* Tenant Info */}
-          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-            <User className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">Tenant</p>
-              <p className="font-medium">{leaseDetails?.tenant_name}</p>
-            </div>
-          </div>
+      <main className="flex-1 max-w-4xl mx-auto px-4 py-8 w-full">
+        {/* Account Summary & Property Details */}
+        <div className="grid md:grid-cols-2 gap-6">
+          <AccountSummaryCard
+            totalDueCents={leaseDetails!.total_due_cents}
+            dueDate={leaseDetails!.due_date}
+            daysUntilDue={leaseDetails!.days_until_due}
+            isPastDue={leaseDetails!.is_past_due}
+            lastPaymentDate={leaseDetails!.last_payment?.paid_at}
+          />
+          <PropertyDetailsCard
+            tenantName={leaseDetails!.tenant_name}
+            tenantEmail={leaseDetails!.tenant_email}
+            propertyAddress={leaseDetails!.property_address}
+            leaseStartDate={leaseDetails!.lease_start_date}
+          />
+        </div>
 
-          {/* Property Info */}
-          <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-            <Building2 className="h-5 w-5 text-muted-foreground mt-0.5" />
-            <div>
-              <p className="text-sm text-muted-foreground">Property</p>
-              <p className="font-medium">{leaseDetails?.property_address}</p>
-            </div>
-          </div>
+        {/* Charges Breakdown */}
+        <div className="mt-6">
+          <ChargesBreakdownCard
+            rentAmountCents={leaseDetails!.rent_amount_cents}
+            lateFeeCents={leaseDetails!.late_fee_cents}
+            totalDueCents={leaseDetails!.total_due_cents}
+          />
+        </div>
 
-          {/* Amount Due */}
-          <div className="flex items-center gap-3 p-4 bg-primary/10 rounded-lg border border-primary/20">
-            <DollarSign className="h-6 w-6 text-primary" />
-            <div>
-              <p className="text-sm text-muted-foreground">Amount Due</p>
-              <p className="text-2xl font-bold text-primary">
-                {leaseDetails && formatCentsToDollars(leaseDetails.rent_amount_cents)}
-              </p>
-            </div>
-          </div>
-
-          {/* Due Date */}
-          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-            <Calendar className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">Due Date</p>
-              <p className="font-medium">
-                {leaseDetails && formatDate(leaseDetails.due_date)}
-              </p>
-            </div>
-          </div>
-
-          {/* Pay Button */}
-          <Button 
-            className="w-full h-12 text-lg font-semibold" 
+        {/* Pay Now Button */}
+        <div className="mt-6">
+          <Button
+            size="xl"
+            className="w-full h-14 text-lg font-semibold shadow-elevated"
             onClick={handlePayment}
             disabled={loadingPayment}
           >
@@ -228,15 +225,45 @@ export default function TenantPay() {
                 Processing...
               </>
             ) : (
-              "Pay Rent Now"
+              <>
+                <CreditCard className="mr-2 h-5 w-5" />
+                Pay Now — {formatCentsToDollars(leaseDetails!.total_due_cents)}
+              </>
             )}
           </Button>
+        </div>
 
-          <p className="text-xs text-center text-muted-foreground">
-            Payments are processed securely via Stripe
-          </p>
-        </CardContent>
-      </Card>
+        {/* Payment History */}
+        <div className="mt-6">
+          <PaymentHistoryCard payments={paymentHistory} />
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mt-6 grid grid-cols-2 gap-4">
+          <ReportIssueDialog
+            tenantId={leaseDetails!.tenant_id}
+            propertyAddress={leaseDetails!.property_address}
+          >
+            <Button variant="outline" className="w-full h-12">
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Report an Issue
+            </Button>
+          </ReportIssueDialog>
+
+          <Button
+            variant="outline"
+            className="w-full h-12"
+            onClick={() =>
+              (window.location.href = "mailto:management@precisioncapital.homes")
+            }
+          >
+            <Mail className="mr-2 h-4 w-4" />
+            Contact Management
+          </Button>
+        </div>
+      </main>
+
+      <TenantPortalFooter />
     </div>
   );
 }
