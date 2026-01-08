@@ -6,20 +6,49 @@ import { Textarea } from "@/components/ui/textarea";
 import { Phone, Mail, Clock } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Contact = () => {
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitted(true);
-    toast({
-      title: "Message Sent!",
-      description: "Thank you! We'll be in touch shortly.",
-    });
-    setFormData({ name: "", email: "", message: "" });
+    setIsSubmitting(true);
+
+    try {
+      // Send email notification
+      const { error: emailError } = await supabase.functions.invoke("send-notification", {
+        body: {
+          form_type: "contact",
+          name: formData.name,
+          email: formData.email,
+          message: formData.message,
+        },
+      });
+
+      if (emailError) {
+        console.error("Email notification failed:", emailError);
+      }
+
+      setIsSubmitted(true);
+      toast({
+        title: "Message Sent!",
+        description: "Thank you! We'll be in touch shortly.",
+      });
+      setFormData({ name: "", email: "", message: "" });
+    } catch (error: any) {
+      console.error("Contact form error:", error);
+      toast({
+        title: "Submission Failed",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -46,6 +75,13 @@ const Contact = () => {
                 {isSubmitted ? (
                   <div className="text-center py-8">
                     <p className="text-lg text-primary font-medium">Thank you! We'll be in touch shortly.</p>
+                    <Button
+                      variant="outline"
+                      className="mt-4"
+                      onClick={() => setIsSubmitted(false)}
+                    >
+                      Send Another Message
+                    </Button>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-5">
@@ -87,8 +123,8 @@ const Contact = () => {
                         required
                       />
                     </div>
-                    <Button type="submit" size="lg" className="w-full">
-                      Send Message
+                    <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+                      {isSubmitting ? "Sending..." : "Send Message"}
                     </Button>
                   </form>
                 )}
@@ -104,7 +140,7 @@ const Contact = () => {
                     </div>
                     <div>
                       <p className="font-medium text-foreground">Phone</p>
-                      <p className="text-muted-foreground">(580) 555-1234</p>
+                      <p className="text-muted-foreground">(580) 399-0001</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
@@ -113,7 +149,7 @@ const Contact = () => {
                     </div>
                     <div>
                       <p className="font-medium text-foreground">Email</p>
-                      <p className="text-muted-foreground">info@precisioncapital.com</p>
+                      <p className="text-muted-foreground">management@precisioncapital.homes</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
