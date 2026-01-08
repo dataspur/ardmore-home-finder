@@ -2,19 +2,13 @@ import { forwardRef } from "react";
 import { Link } from "react-router-dom";
 import { Phone, Mail, MapPin } from "lucide-react";
 import logo from "@/assets/logo.png";
-
 const Footer = forwardRef<HTMLElement>((_, ref) => {
-  return (
-    <footer ref={ref} className="bg-foreground text-primary-foreground">
+  return <footer ref={ref} className="bg-foreground text-primary-foreground">
       <div className="container mx-auto px-4 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Logo & Description */}
           <div className="lg:col-span-1">
-            <img 
-              src={logo} 
-              alt="Precision Capital" 
-              className="h-10 w-auto mb-4 brightness-0 invert"
-            />
+            <img src={logo} alt="Precision Capital" className="h-10 w-auto mb-4 brightness-0 invert object-scale-down" />
             <p className="text-primary-foreground/70 text-sm leading-relaxed">
               A family-owned real estate company bringing quality homes to Ardmore, Oklahoma.
             </p>
@@ -100,10 +94,7 @@ const Footer = forwardRef<HTMLElement>((_, ref) => {
           </div>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 });
-
 Footer.displayName = "Footer";
-
 export default Footer;
