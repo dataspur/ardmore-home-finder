@@ -4,12 +4,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ScrollToTop from "@/components/layout/ScrollToTop";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Rentals from "./pages/Rentals";
 import ForSale from "./pages/ForSale";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import ResidentPortal from "./pages/ResidentPortal";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,7 +34,15 @@ const App = () => (
           <Route path="/for-sale" element={<ForSale />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
-          <Route path="/resident-portal" element={<ResidentPortal />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route
+            path="/resident-portal"
+            element={
+              <ProtectedRoute>
+                <ResidentPortal />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
