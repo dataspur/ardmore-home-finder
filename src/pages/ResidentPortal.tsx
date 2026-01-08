@@ -3,9 +3,12 @@ import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CreditCard, Wrench, FileText, Phone, Mail } from "lucide-react";
+import { CreditCard, Wrench, FileText, Phone, Mail, LogOut } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 const NAVBAR_HEIGHT = 80;
 
@@ -20,28 +23,123 @@ const scrollToSection = (id: string) => {
 const ResidentPortal = () => {
   const [maintenanceForm, setMaintenanceForm] = useState({ name: "", email: "", address: "", issue: "" });
   const [leaseForm, setLeaseForm] = useState({ name: "", email: "", address: "" });
+  const [maintenanceSubmitting, setMaintenanceSubmitting] = useState(false);
+  const [leaseSubmitting, setLeaseSubmitting] = useState(false);
   const [maintenanceSubmitted, setMaintenanceSubmitted] = useState(false);
   const [leaseSubmitted, setLeaseSubmitted] = useState(false);
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
-  const handleMaintenanceSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setMaintenanceSubmitted(true);
-    toast({
-      title: "Request Submitted",
-      description: "Your request has been received. Maintenance will follow up shortly.",
-    });
-    setMaintenanceForm({ name: "", email: "", address: "", issue: "" });
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/");
   };
 
-  const handleLeaseSubmit = (e: React.FormEvent) => {
+  const handleMaintenanceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLeaseSubmitted(true);
-    toast({
-      title: "Request Submitted",
-      description: "We'll email you a copy of your lease shortly.",
-    });
-    setLeaseForm({ name: "", email: "", address: "" });
+    if (!user) return;
+    
+    setMaintenanceSubmitting(true);
+
+    try {
+      // Save to database
+      const { error: dbError } = await supabase.from("form_submissions").insert({
+        form_type: "maintenance",
+        user_id: user.id,
+        data: {
+          name: maintenanceForm.name,
+          email: maintenanceForm.email,
+          address: maintenanceForm.address,
+          issue: maintenanceForm.issue,
+        },
+      });
+
+      if (dbError) throw dbError;
+
+      // Send email notification
+      const { error: emailError } = await supabase.functions.invoke("send-notification", {
+        body: {
+          form_type: "maintenance",
+          name: maintenanceForm.name,
+          email: maintenanceForm.email,
+          address: maintenanceForm.address,
+          issue: maintenanceForm.issue,
+        },
+      });
+
+      if (emailError) {
+        console.error("Email notification failed:", emailError);
+      }
+
+      setMaintenanceSubmitted(true);
+      toast({
+        title: "Request Submitted",
+        description: "Your maintenance request has been received. Our team will follow up shortly.",
+      });
+      setMaintenanceForm({ name: "", email: "", address: "", issue: "" });
+    } catch (error: any) {
+      console.error("Maintenance submission error:", error);
+      toast({
+        title: "Submission Failed",
+        description: error.message || "Failed to submit request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setMaintenanceSubmitting(false);
+    }
+  };
+
+  const handleLeaseSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    
+    setLeaseSubmitting(true);
+
+    try {
+      // Save to database
+      const { error: dbError } = await supabase.from("form_submissions").insert({
+        form_type: "lease",
+        user_id: user.id,
+        data: {
+          name: leaseForm.name,
+          email: leaseForm.email,
+          address: leaseForm.address,
+        },
+      });
+
+      if (dbError) throw dbError;
+
+      // Send email notification
+      const { error: emailError } = await supabase.functions.invoke("send-notification", {
+        body: {
+          form_type: "lease",
+          name: leaseForm.name,
+          email: leaseForm.email,
+          address: leaseForm.address,
+        },
+      });
+
+      if (emailError) {
+        console.error("Email notification failed:", emailError);
+      }
+
+      setLeaseSubmitted(true);
+      toast({
+        title: "Request Submitted",
+        description: "We'll email you a copy of your lease shortly.",
+      });
+      setLeaseForm({ name: "", email: "", address: "" });
+    } catch (error: any) {
+      console.error("Lease submission error:", error);
+      toast({
+        title: "Submission Failed",
+        description: error.message || "Failed to submit request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLeaseSubmitting(false);
+    }
   };
 
   return (
@@ -50,11 +148,23 @@ const ResidentPortal = () => {
       <main className="pt-20">
         {/* Hero */}
         <section className="py-16 bg-primary text-primary-foreground">
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Precision Capital Resident Portal</h1>
-            <p className="text-lg text-primary-foreground/80 max-w-2xl mx-auto">
-              Pay rent, request maintenance, or manage your lease online.
-            </p>
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="text-center md:text-left">
+                <h1 className="text-4xl md:text-5xl font-bold mb-4">Precision Capital Resident Portal</h1>
+                <p className="text-lg text-primary-foreground/80 max-w-2xl">
+                  Pay rent, request maintenance, or manage your lease online.
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                onClick={handleLogout}
+                className="flex items-center gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </Button>
+            </div>
           </div>
         </section>
 
@@ -123,6 +233,13 @@ const ResidentPortal = () => {
               {maintenanceSubmitted ? (
                 <div className="text-center py-8">
                   <p className="text-lg text-primary font-medium">Your request has been received. Maintenance will follow up shortly.</p>
+                  <Button
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => setMaintenanceSubmitted(false)}
+                  >
+                    Submit Another Request
+                  </Button>
                 </div>
               ) : (
                 <form onSubmit={handleMaintenanceSubmit} className="space-y-5">
@@ -176,8 +293,8 @@ const ResidentPortal = () => {
                       required
                     />
                   </div>
-                  <Button type="submit" size="lg" className="w-full">
-                    Submit Request
+                  <Button type="submit" size="lg" className="w-full" disabled={maintenanceSubmitting}>
+                    {maintenanceSubmitting ? "Submitting..." : "Submit Request"}
                   </Button>
                 </form>
               )}
@@ -193,6 +310,13 @@ const ResidentPortal = () => {
               {leaseSubmitted ? (
                 <div className="text-center py-8">
                   <p className="text-lg text-primary font-medium">We'll email you a copy of your lease shortly.</p>
+                  <Button
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => setLeaseSubmitted(false)}
+                  >
+                    Submit Another Request
+                  </Button>
                 </div>
               ) : (
                 <form onSubmit={handleLeaseSubmit} className="space-y-5">
@@ -233,8 +357,8 @@ const ResidentPortal = () => {
                       required
                     />
                   </div>
-                  <Button type="submit" size="lg" className="w-full">
-                    Request Lease
+                  <Button type="submit" size="lg" className="w-full" disabled={leaseSubmitting}>
+                    {leaseSubmitting ? "Submitting..." : "Request Lease"}
                   </Button>
                 </form>
               )}
