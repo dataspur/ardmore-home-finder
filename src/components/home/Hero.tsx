@@ -25,13 +25,13 @@ const Hero = () => {
       <div className="relative z-10 container mx-auto px-4 text-center">
         <div className="max-w-3xl mx-auto">
           <h1 
-            className="text-4xl md:text-5xl lg:text-6xl font-bold text-primary-foreground mb-6 opacity-0 animate-fade-in"
+            className="font-heading text-h1-mobile md:text-h1 text-primary-foreground mb-6 opacity-0 animate-fade-in hero-text-shadow"
             style={{ animationDelay: "0.2s" }}
           >
             Quality Living in Ardmore
           </h1>
           <p 
-            className="text-lg md:text-xl text-primary-foreground/90 mb-10 max-w-2xl mx-auto opacity-0 animate-fade-in"
+            className="font-body text-body-lg text-primary-foreground/90 mb-10 max-w-2xl mx-auto opacity-0 animate-fade-in"
             style={{ animationDelay: "0.4s" }}
           >
             Proudly offering well-maintained homes and rentals in Southern Oklahoma.

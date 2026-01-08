@@ -14,7 +14,22 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Outfit', 'sans-serif'],
+        heading: ['Montserrat', 'sans-serif'],
+        body: ['Open Sans', 'sans-serif'],
+        sans: ['Open Sans', 'sans-serif'],
+      },
+      fontSize: {
+        'h1': ['3.5rem', { lineHeight: '1.2', letterSpacing: '-0.02em', fontWeight: '700' }],
+        'h1-mobile': ['2.5rem', { lineHeight: '1.2', letterSpacing: '-0.02em', fontWeight: '700' }],
+        'h2': ['2.25rem', { lineHeight: '1.3', letterSpacing: '-0.01em', fontWeight: '700' }],
+        'h2-mobile': ['1.75rem', { lineHeight: '1.3', letterSpacing: '-0.01em', fontWeight: '700' }],
+        'h3': ['1.5rem', { lineHeight: '1.4', letterSpacing: '-0.005em', fontWeight: '600' }],
+        'price': ['1.375rem', { lineHeight: '1.3', letterSpacing: '0', fontWeight: '700' }],
+        'nav': ['1rem', { lineHeight: '1', letterSpacing: '0.02em', fontWeight: '600' }],
+        'body-lg': ['1.125rem', { lineHeight: '1.6', letterSpacing: '0.01em' }],
+        'label': ['0.875rem', { lineHeight: '1.4', letterSpacing: '0', fontWeight: '600' }],
+        'footer': ['0.875rem', { lineHeight: '1.6', letterSpacing: '0' }],
+        'footer-heading': ['1rem', { lineHeight: '1.4', letterSpacing: '0', fontWeight: '600' }],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -90,6 +105,10 @@ export default {
         "slide-in-right": {
           from: { opacity: "0", transform: "translateX(20px)" },
           to: { opacity: "1", transform: "translateX(0)" },
+        },
+        "image-zoom": {
+          from: { transform: "scale(1)" },
+          to: { transform: "scale(1.08)" },
         },
       },
       animation: {
