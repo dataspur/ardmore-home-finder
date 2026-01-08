@@ -14,6 +14,16 @@ interface ReplyRequest {
   body: string;
 }
 
+// SECURITY: HTML escape function to prevent XSS in emails
+const escapeHtml = (text: string): string => {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
+
 const handler = async (req: Request): Promise<Response> => {
   console.log("send-tenant-reply function called");
 
@@ -87,12 +97,17 @@ const handler = async (req: Request): Promise<Response> => {
     // Get the message subject for the email
     const messageSubject = (recipient.admin_messages as any)?.subject || "Message";
 
+    // SECURITY: Sanitize user input before embedding in HTML emails
+    const sanitizedBody = escapeHtml(body);
+    const sanitizedTenantName = escapeHtml(tenant.name);
+    const sanitizedMessageSubject = escapeHtml(messageSubject);
+
     // Send email notification to admin
     console.log("Sending reply notification to management");
     const emailResponse = await resend.emails.send({
       from: "Precision Capital <noreply@precisioncapital.homes>",
       to: ["management@precisioncapital.homes"],
-      subject: `💬 Reply from ${tenant.name}: Re: ${messageSubject}`,
+      subject: `💬 Reply from ${sanitizedTenantName}: Re: ${sanitizedMessageSubject}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">
@@ -101,15 +116,15 @@ const handler = async (req: Request): Promise<Response> => {
           <table style="border-collapse: collapse; width: 100%;">
             <tr>
               <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">From</td>
-              <td style="padding: 12px; border: 1px solid #e5e7eb;">${tenant.name} (${tenant.email})</td>
+              <td style="padding: 12px; border: 1px solid #e5e7eb;">${sanitizedTenantName} (${escapeHtml(tenant.email)})</td>
             </tr>
             <tr>
               <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Regarding</td>
-              <td style="padding: 12px; border: 1px solid #e5e7eb;">${messageSubject}</td>
+              <td style="padding: 12px; border: 1px solid #e5e7eb;">${sanitizedMessageSubject}</td>
             </tr>
             <tr>
               <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; background: #f9fafb;">Reply</td>
-              <td style="padding: 12px; border: 1px solid #e5e7eb; white-space: pre-wrap;">${body}</td>
+              <td style="padding: 12px; border: 1px solid #e5e7eb; white-space: pre-wrap;">${sanitizedBody}</td>
             </tr>
           </table>
           <p style="color: #6b7280; font-size: 12px; margin-top: 20px;">

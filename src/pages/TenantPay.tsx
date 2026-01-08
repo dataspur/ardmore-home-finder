@@ -129,10 +129,12 @@ export default function TenantPay() {
     setLoadingPayment(true);
 
     try {
+      // SECURITY: Pass access_token for verification on the backend
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {
           lease_id: leaseDetails.lease_id,
           return_url: window.location.href,
+          access_token: token, // Include token for backend verification
         },
       });
 
@@ -158,10 +160,12 @@ export default function TenantPay() {
     setLoadingAutopay(true);
 
     try {
+      // SECURITY: Pass access_token for verification on the backend
       const { data, error } = await supabase.functions.invoke("setup-autopay", {
         body: {
           lease_id: leaseDetails.lease_id,
           return_url: window.location.href.split("?")[0], // Remove any existing params
+          access_token: token, // Include token for backend verification
         },
       });
 

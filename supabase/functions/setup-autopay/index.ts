@@ -13,7 +13,8 @@ serve(async (req) => {
   }
 
   try {
-    const { lease_id, return_url } = await req.json();
+    // SECURITY: Validate access token from request
+    const { lease_id, return_url, access_token } = await req.json();
 
     if (!lease_id || !return_url) {
       return new Response(
@@ -45,10 +46,10 @@ serve(async (req) => {
       );
     }
 
-    // Fetch tenant separately
+    // Fetch tenant separately with access_token for verification
     const { data: tenant, error: tenantError } = await supabaseAdmin
       .from("tenants")
-      .select("id, name, email, stripe_customer_id")
+      .select("id, name, email, stripe_customer_id, access_token")
       .eq("id", lease.tenant_id)
       .single();
 
@@ -58,6 +59,36 @@ serve(async (req) => {
         JSON.stringify({ error: "Tenant not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // SECURITY: Validate access token matches (for token-based access like /pay/:token)
+    if (access_token && tenant.access_token !== access_token) {
+      console.error("Access token mismatch");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Invalid access token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // If no access token provided, require Authorization header
+    if (!access_token) {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized: Missing authentication" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      const token = authHeader.replace("Bearer ", "");
+      const { data: claims, error: claimsError } = await supabaseAdmin.auth.getUser(token);
+      
+      if (claimsError || !claims.user) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized: Invalid token" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Initialize Stripe
