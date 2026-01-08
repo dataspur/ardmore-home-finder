@@ -44,6 +44,82 @@ export type Database = {
         }
         Relationships: []
       }
+      leases: {
+        Row: {
+          created_at: string | null
+          due_date: string
+          id: string
+          property_address: string
+          rent_amount_cents: number
+          status: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          due_date: string
+          id?: string
+          property_address: string
+          rent_amount_cents: number
+          status?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          due_date?: string
+          id?: string
+          property_address?: string
+          rent_amount_cents?: number
+          status?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount_cents: number
+          created_at: string | null
+          id: string
+          lease_id: string
+          status: string | null
+          stripe_session_id: string | null
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string | null
+          id?: string
+          lease_id: string
+          status?: string | null
+          stripe_session_id?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string | null
+          id?: string
+          lease_id?: string
+          status?: string | null
+          stripe_session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_lease_id_fkey"
+            columns: ["lease_id"]
+            isOneToOne: false
+            referencedRelation: "leases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -77,12 +153,42 @@ export type Database = {
         }
         Relationships: []
       }
+      tenants: {
+        Row: {
+          access_token: string | null
+          created_at: string | null
+          email: string
+          id: string
+          name: string
+          stripe_customer_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          name: string
+          stripe_customer_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string
+          stripe_customer_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_lease_details: { Args: { lookup_token: string }; Returns: Json }
     }
     Enums: {
       form_type: "contact" | "maintenance" | "lease"
