@@ -46,32 +46,44 @@ export type Database = {
       }
       leases: {
         Row: {
+          autopay_enabled: boolean | null
           created_at: string | null
           due_date: string
           id: string
           property_address: string
           rent_amount_cents: number
           status: string | null
+          stripe_payment_method_id: string | null
+          stripe_price_id: string | null
+          stripe_subscription_id: string | null
           tenant_id: string
           updated_at: string | null
         }
         Insert: {
+          autopay_enabled?: boolean | null
           created_at?: string | null
           due_date: string
           id?: string
           property_address: string
           rent_amount_cents: number
           status?: string | null
+          stripe_payment_method_id?: string | null
+          stripe_price_id?: string | null
+          stripe_subscription_id?: string | null
           tenant_id: string
           updated_at?: string | null
         }
         Update: {
+          autopay_enabled?: boolean | null
           created_at?: string | null
           due_date?: string
           id?: string
           property_address?: string
           rent_amount_cents?: number
           status?: string | null
+          stripe_payment_method_id?: string | null
+          stripe_price_id?: string | null
+          stripe_subscription_id?: string | null
           tenant_id?: string
           updated_at?: string | null
         }
