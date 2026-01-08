@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -29,6 +30,30 @@ const handler = async (req: Request): Promise<Response> => {
     const { form_type, name, email, address, issue, message }: NotificationRequest = await req.json();
     
     console.log("Received notification request:", { form_type, name, email, address });
+
+    // Store contact form submissions in database
+    if (form_type === "contact") {
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+        const { error: dbError } = await supabase.from("form_submissions").insert({
+          form_type: "contact",
+          user_id: null, // Anonymous submission
+          data: { name, email, message },
+          status: "pending",
+        });
+
+        if (dbError) {
+          console.error("Failed to store contact submission:", dbError);
+        } else {
+          console.log("Contact submission stored in database");
+        }
+      } catch (dbError) {
+        console.error("Database error:", dbError);
+      }
+    }
 
     let subject: string;
     let htmlContent: string;

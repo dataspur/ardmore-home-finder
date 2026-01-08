@@ -15,7 +15,9 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import logo from "@/assets/logo.png";
+import { useAdminUnreadCounts } from "@/hooks/useAdminUnreadCounts";
 
 const navItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
@@ -27,6 +29,7 @@ const navItems = [
 
 export function AdminSidebar() {
   const navigate = useNavigate();
+  const { data: unreadCounts } = useAdminUnreadCounts();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -61,7 +64,12 @@ export function AdminSidebar() {
                       }
                     >
                       <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
+                      <span className="flex-1">{item.title}</span>
+                      {item.title === "Messages" && unreadCounts && unreadCounts.total > 0 && (
+                        <Badge variant="destructive" className="h-5 min-w-[20px] flex items-center justify-center">
+                          {unreadCounts.total}
+                        </Badge>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

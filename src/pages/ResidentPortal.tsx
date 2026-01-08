@@ -3,13 +3,15 @@ import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CreditCard, Wrench, FileText, Phone, Mail, LogOut, Loader2 } from "lucide-react";
+import { CreditCard, Wrench, FileText, Phone, Mail, LogOut, Loader2, Bell } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 import TenantMessagesCard from "@/components/tenant/TenantMessagesCard";
+import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
 
 const NAVBAR_HEIGHT = 80;
 
@@ -32,6 +34,7 @@ const ResidentPortal = () => {
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { data: unreadCount } = useUnreadMessageCount();
 
   const handlePayRent = async () => {
     if (!user) return;
@@ -194,14 +197,22 @@ const ResidentPortal = () => {
                   Pay rent, request maintenance, or manage your lease online.
                 </p>
               </div>
-              <Button
-                variant="secondary"
-                onClick={handleLogout}
-                className="flex items-center gap-2"
-              >
-                <LogOut className="w-4 h-4" />
-                Sign Out
-              </Button>
+              <div className="flex items-center gap-3">
+                {unreadCount && unreadCount > 0 && (
+                  <div className="flex items-center gap-2 bg-primary-foreground/20 px-4 py-2 rounded-lg">
+                    <Bell className="w-5 h-5" />
+                    <span className="font-medium">{unreadCount} new message{unreadCount > 1 ? 's' : ''}</span>
+                  </div>
+                )}
+                <Button
+                  variant="secondary"
+                  onClick={handleLogout}
+                  className="flex items-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign Out
+                </Button>
+              </div>
             </div>
           </div>
         </section>
