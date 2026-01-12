@@ -93,6 +93,7 @@ export type Database = {
           stripe_price_id: string | null
           stripe_subscription_id: string | null
           tenant_id: string
+          unit_number: string | null
           updated_at: string | null
         }
         Insert: {
@@ -107,6 +108,7 @@ export type Database = {
           stripe_price_id?: string | null
           stripe_subscription_id?: string | null
           tenant_id: string
+          unit_number?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -121,6 +123,7 @@ export type Database = {
           stripe_price_id?: string | null
           stripe_subscription_id?: string | null
           tenant_id?: string
+          unit_number?: string | null
           updated_at?: string | null
         }
         Relationships: [
