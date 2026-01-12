@@ -80,6 +80,57 @@ export type Database = {
         }
         Relationships: []
       }
+      lease_documents: {
+        Row: {
+          file_name: string
+          file_path: string
+          file_size_bytes: number | null
+          id: string
+          lease_id: string | null
+          mime_type: string | null
+          notes: string | null
+          tenant_id: string
+          uploaded_at: string | null
+        }
+        Insert: {
+          file_name: string
+          file_path: string
+          file_size_bytes?: number | null
+          id?: string
+          lease_id?: string | null
+          mime_type?: string | null
+          notes?: string | null
+          tenant_id: string
+          uploaded_at?: string | null
+        }
+        Update: {
+          file_name?: string
+          file_path?: string
+          file_size_bytes?: number | null
+          id?: string
+          lease_id?: string | null
+          mime_type?: string | null
+          notes?: string | null
+          tenant_id?: string
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lease_documents_lease_id_fkey"
+            columns: ["lease_id"]
+            isOneToOne: false
+            referencedRelation: "leases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leases: {
         Row: {
           autopay_enabled: boolean | null

@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import TenantMessagesCard from "@/components/tenant/TenantMessagesCard";
 import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
+import { TenantLeaseDocuments } from "@/components/tenant/TenantLeaseDocuments";
 
 const NAVBAR_HEIGHT = 80;
 
@@ -269,21 +270,21 @@ const ResidentPortal = () => {
                 </Button>
               </div>
 
-              {/* Lease Copy */}
+              {/* Lease Documents */}
               <div className="bg-card rounded-2xl p-8 shadow-card text-center">
                 <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-6">
                   <FileText className="w-7 h-7 text-primary" />
                 </div>
-                <h3 className="text-xl font-bold text-foreground mb-3">Request Lease Copy</h3>
+                <h3 className="text-xl font-bold text-foreground mb-3">Your Lease Documents</h3>
                 <p className="text-muted-foreground mb-6">
-                  Need a copy of your lease agreement? Request one below.
+                  Access your lease agreements and documents instantly.
                 </p>
                 <Button 
                   variant="outline" 
                   className="w-full"
-                  onClick={() => scrollToSection("lease-form")}
+                  onClick={() => scrollToSection("lease-documents")}
                 >
-                  Request Lease
+                  View Documents
                 </Button>
               </div>
             </div>
@@ -367,66 +368,74 @@ const ResidentPortal = () => {
           </div>
         </section>
 
-        {/* Lease Copy Request Form */}
-        <section id="lease-form" className="py-16">
+        {/* Lease Documents Section */}
+        <section id="lease-documents" className="py-16">
           <div className="container mx-auto px-4">
-            <div className="max-w-2xl mx-auto bg-card rounded-2xl p-8 shadow-card">
-              <h2 className="text-2xl font-bold text-foreground mb-6">Lease Copy Request</h2>
-              {leaseSubmitted ? (
-                <div className="text-center py-8">
-                  <p className="text-lg text-primary font-medium">We'll email you a copy of your lease shortly.</p>
-                  <Button
-                    variant="outline"
-                    className="mt-4"
-                    onClick={() => setLeaseSubmitted(false)}
-                  >
-                    Submit Another Request
-                  </Button>
-                </div>
-              ) : (
-                <form onSubmit={handleLeaseSubmit} className="space-y-5">
-                  <div>
-                    <label htmlFor="lease-name" className="block text-sm font-medium text-foreground mb-2">
-                      Full Name
-                    </label>
-                    <Input 
-                      id="lease-name" 
-                      value={leaseForm.name}
-                      onChange={(e) => setLeaseForm({ ...leaseForm, name: e.target.value })}
-                      placeholder="Your full name"
-                      required
-                    />
+            <div className="max-w-2xl mx-auto">
+              <TenantLeaseDocuments />
+              
+              {/* Fallback Request Form */}
+              <div className="mt-8 bg-card rounded-2xl p-8 shadow-card">
+                <h3 className="text-lg font-semibold text-foreground mb-4">Don't see your document?</h3>
+                <p className="text-muted-foreground mb-6">
+                  Request a copy and we'll send it to your email.
+                </p>
+                {leaseSubmitted ? (
+                  <div className="text-center py-4">
+                    <p className="text-primary font-medium">We'll email you a copy of your lease shortly.</p>
+                    <Button
+                      variant="outline"
+                      className="mt-4"
+                      onClick={() => setLeaseSubmitted(false)}
+                    >
+                      Submit Another Request
+                    </Button>
                   </div>
-                  <div>
-                    <label htmlFor="lease-email" className="block text-sm font-medium text-foreground mb-2">
-                      Email Address
-                    </label>
-                    <Input 
-                      id="lease-email" 
-                      type="email"
-                      value={leaseForm.email}
-                      onChange={(e) => setLeaseForm({ ...leaseForm, email: e.target.value })}
-                      placeholder="your@email.com"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="lease-address" className="block text-sm font-medium text-foreground mb-2">
-                      Property Address
-                    </label>
-                    <Input 
-                      id="lease-address" 
-                      value={leaseForm.address}
-                      onChange={(e) => setLeaseForm({ ...leaseForm, address: e.target.value })}
-                      placeholder="Your property address"
-                      required
-                    />
-                  </div>
-                  <Button type="submit" size="lg" className="w-full" disabled={leaseSubmitting}>
-                    {leaseSubmitting ? "Submitting..." : "Request Lease"}
-                  </Button>
-                </form>
-              )}
+                ) : (
+                  <form onSubmit={handleLeaseSubmit} className="space-y-4">
+                    <div>
+                      <label htmlFor="lease-name" className="block text-sm font-medium text-foreground mb-2">
+                        Full Name
+                      </label>
+                      <Input 
+                        id="lease-name" 
+                        value={leaseForm.name}
+                        onChange={(e) => setLeaseForm({ ...leaseForm, name: e.target.value })}
+                        placeholder="Your full name"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="lease-email" className="block text-sm font-medium text-foreground mb-2">
+                        Email Address
+                      </label>
+                      <Input 
+                        id="lease-email" 
+                        type="email"
+                        value={leaseForm.email}
+                        onChange={(e) => setLeaseForm({ ...leaseForm, email: e.target.value })}
+                        placeholder="your@email.com"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="lease-address" className="block text-sm font-medium text-foreground mb-2">
+                        Property Address
+                      </label>
+                      <Input 
+                        id="lease-address" 
+                        value={leaseForm.address}
+                        onChange={(e) => setLeaseForm({ ...leaseForm, address: e.target.value })}
+                        placeholder="Your property address"
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={leaseSubmitting}>
+                      {leaseSubmitting ? "Submitting..." : "Request Lease Copy"}
+                    </Button>
+                  </form>
+                )}
+              </div>
             </div>
           </div>
         </section>
