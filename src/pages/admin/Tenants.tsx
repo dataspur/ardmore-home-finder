@@ -20,7 +20,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, Loader2, Copy, DollarSign } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, Pencil, Loader2, Copy, DollarSign, Trash2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -74,6 +84,8 @@ export default function Tenants() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<TenantWithLease | null>(null);
   const [formData, setFormData] = useState<FormData>(initialFormData);
+  const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
+  const [tenantToDeactivate, setTenantToDeactivate] = useState<TenantWithLease | null>(null);
   const { toast } = useToast();
 
   const fetchTenantsWithLeases = async () => {
@@ -120,14 +132,57 @@ export default function Tenants() {
     setIsSubmitting(true);
 
     try {
+      // Parse rent amount for validation
+      const rentCents = formData.rent_amount 
+        ? Math.round(parseFloat(formData.rent_amount) * 100) 
+        : 0;
+
       if (editingTenant) {
-        // Update existing tenant (name and email only)
-        const { error } = await supabase
+        // Update existing tenant (name and email)
+        const { error: tenantError } = await supabase
           .from("tenants")
           .update({ name: formData.name, email: formData.email })
           .eq("id", editingTenant.id);
 
-        if (error) throw error;
+        if (tenantError) throw tenantError;
+
+        // Update or create lease if lease fields are provided
+        if (formData.property_address && formData.rent_amount && formData.due_date) {
+          if (rentCents <= 0 || isNaN(rentCents)) {
+            toast({ variant: "destructive", title: "Error", description: "Please enter a valid rent amount" });
+            setIsSubmitting(false);
+            return;
+          }
+
+          const leaseData = {
+            property_address: formData.property_address,
+            unit_number: formData.unit_number || null,
+            rent_amount_cents: rentCents,
+            due_date: format(formData.due_date, "yyyy-MM-dd"),
+          };
+
+          if (editingTenant.lease) {
+            // Update existing lease
+            const { error: leaseError } = await supabase
+              .from("leases")
+              .update(leaseData)
+              .eq("id", editingTenant.lease.id);
+
+            if (leaseError) throw leaseError;
+          } else {
+            // Create new lease for existing tenant
+            const { error: leaseError } = await supabase
+              .from("leases")
+              .insert({
+                ...leaseData,
+                tenant_id: editingTenant.id,
+                status: "active",
+              });
+
+            if (leaseError) throw leaseError;
+          }
+        }
+
         toast({ title: "Success", description: "Tenant updated" });
       } else {
         // Validate all required fields for new tenant
@@ -138,7 +193,6 @@ export default function Tenants() {
           return;
         }
 
-        const rentCents = Math.round(parseFloat(formData.rent_amount) * 100);
         if (isNaN(rentCents) || rentCents <= 0) {
           toast({ variant: "destructive", title: "Error", description: "Please enter a valid rent amount" });
           setIsSubmitting(false);
@@ -216,6 +270,35 @@ export default function Tenants() {
     }).format(cents / 100);
   };
 
+  const handleDeactivate = async () => {
+    if (!tenantToDeactivate?.lease) {
+      setDeactivateDialogOpen(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("leases")
+        .update({ status: "inactive" })
+        .eq("id", tenantToDeactivate.lease.id);
+
+      if (error) throw error;
+
+      toast({ title: "Success", description: "Tenant deactivated" });
+      fetchTenantsWithLeases();
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to deactivate" });
+    } finally {
+      setDeactivateDialogOpen(false);
+      setTenantToDeactivate(null);
+    }
+  };
+
+  const openDeactivateDialog = (tenant: TenantWithLease) => {
+    setTenantToDeactivate(tenant);
+    setDeactivateDialogOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -258,75 +341,75 @@ export default function Tenants() {
                 </div>
               </div>
 
-              {/* Lease Details Section - Only show for new tenants */}
-              {!editingTenant && (
-                <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-muted-foreground">Lease Details</h3>
+              {/* Lease Details Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  Lease Details {editingTenant && "(optional)"}
+                </h3>
+                <div className="space-y-2">
+                  <Label htmlFor="property_address">Property Address {!editingTenant && "*"}</Label>
+                  <Input
+                    id="property_address"
+                    value={formData.property_address}
+                    onChange={(e) => setFormData({ ...formData, property_address: e.target.value })}
+                    placeholder="123 Main Street"
+                    required={!editingTenant}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="property_address">Property Address *</Label>
+                    <Label htmlFor="unit_number">Unit Number</Label>
                     <Input
-                      id="property_address"
-                      value={formData.property_address}
-                      onChange={(e) => setFormData({ ...formData, property_address: e.target.value })}
-                      placeholder="123 Main Street"
-                      required={!editingTenant}
+                      id="unit_number"
+                      value={formData.unit_number}
+                      onChange={(e) => setFormData({ ...formData, unit_number: e.target.value })}
+                      placeholder="Apt 2B"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="unit_number">Unit Number</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="rent_amount">Monthly Rent {!editingTenant && "*"}</Label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        id="unit_number"
-                        value={formData.unit_number}
-                        onChange={(e) => setFormData({ ...formData, unit_number: e.target.value })}
-                        placeholder="Apt 2B"
+                        id="rent_amount"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.rent_amount}
+                        onChange={(e) => setFormData({ ...formData, rent_amount: e.target.value })}
+                        placeholder="1500.00"
+                        className="pl-9"
+                        required={!editingTenant}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="rent_amount">Monthly Rent *</Label>
-                      <div className="relative">
-                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="rent_amount"
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={formData.rent_amount}
-                          onChange={(e) => setFormData({ ...formData, rent_amount: e.target.value })}
-                          placeholder="1500.00"
-                          className="pl-9"
-                          required={!editingTenant}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Rent Due Date *</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !formData.due_date && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {formData.due_date ? format(formData.due_date, "PPP") : "Select due date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={formData.due_date}
-                          onSelect={(date) => setFormData({ ...formData, due_date: date })}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
                   </div>
                 </div>
-              )}
+                <div className="space-y-2">
+                  <Label>Rent Due Date {!editingTenant && "*"}</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !formData.due_date && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formData.due_date ? format(formData.due_date, "PPP") : "Select due date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formData.due_date}
+                        onSelect={(date) => setFormData({ ...formData, due_date: date })}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
 
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
@@ -395,6 +478,17 @@ export default function Tenants() {
                           >
                             <Copy className="h-4 w-4" />
                           </Button>
+                          {tenant.lease && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openDeactivateDialog(tenant)}
+                              title="Deactivate tenant"
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -405,6 +499,30 @@ export default function Tenants() {
           )}
         </CardContent>
       </Card>
+
+      {/* Deactivate Confirmation Dialog */}
+      <AlertDialog open={deactivateDialogOpen} onOpenChange={setDeactivateDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deactivate Tenant?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will deactivate {tenantToDeactivate?.name}'s lease. They will no longer be able 
+              to make payments through the tenant portal.
+              <br /><br />
+              Payment history will be preserved.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeactivate}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Deactivate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
