@@ -1,6 +1,27 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-2GPS226E9T"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      
+      // Default to denied for GDPR compliance
+      gtag('consent', 'default', {
+        'analytics_storage': 'denied'
+      });
+      
+      // Check if user already consented
+      if (localStorage.getItem('cookie-consent') === 'accepted') {
+        gtag('consent', 'update', {
+          'analytics_storage': 'granted'
+        });
+      }
+      
+      gtag('js', new Date());
+      gtag('config', 'G-2GPS226E9T');
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Precision Capital | Quality Homes &amp; Rentals in Ardmore, OK</title>
