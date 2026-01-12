@@ -136,6 +136,33 @@ export type Database = {
           },
         ]
       }
+      managed_properties: {
+        Row: {
+          address: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          total_units: number
+          updated_at: string | null
+        }
+        Insert: {
+          address: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          total_units?: number
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          total_units?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       message_recipients: {
         Row: {
           created_at: string | null
