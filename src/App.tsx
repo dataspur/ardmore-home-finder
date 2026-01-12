@@ -25,6 +25,7 @@ import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/admin/Dashboard";
 import Messages from "./pages/admin/Messages";
 import Tenants from "./pages/admin/Tenants";
+import Properties from "./pages/admin/Properties";
 import Leases from "./pages/admin/Leases";
 import Payments from "./pages/admin/Payments";
 
@@ -74,6 +75,7 @@ const App = () => (
             <Route index element={<Dashboard />} />
             <Route path="messages" element={<Messages />} />
             <Route path="tenants" element={<Tenants />} />
+            <Route path="properties" element={<Properties />} />
             <Route path="leases" element={<Leases />} />
             <Route path="payments" element={<Payments />} />
           </Route>
