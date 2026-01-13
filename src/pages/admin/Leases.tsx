@@ -28,7 +28,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Copy, Loader2 } from "lucide-react";
+import { Plus, Copy, Loader2, FileText } from "lucide-react";
+import { LeaseDocumentsDialog } from "@/components/admin/LeaseDocumentsDialog";
 
 interface Tenant {
   id: string;
@@ -55,6 +56,12 @@ export default function Leases() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [documentsDialogOpen, setDocumentsDialogOpen] = useState(false);
+  const [selectedLeaseForDocs, setSelectedLeaseForDocs] = useState<{
+    tenantId: string;
+    tenantName: string;
+    leaseId: string;
+  } | null>(null);
   const [formData, setFormData] = useState({
     tenant_id: "",
     property_address: "",
@@ -237,14 +244,31 @@ export default function Leases() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => copyPaymentLink(lease.tenants)}
-                      >
-                        <Copy className="h-3 w-3 mr-1" />
-                        Copy Link
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setSelectedLeaseForDocs({
+                              tenantId: lease.tenant_id,
+                              tenantName: lease.tenants?.name || "Unknown",
+                              leaseId: lease.id,
+                            });
+                            setDocumentsDialogOpen(true);
+                          }}
+                          title="Manage documents"
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyPaymentLink(lease.tenants)}
+                        >
+                          <Copy className="h-3 w-3 mr-1" />
+                          Copy Link
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -253,6 +277,14 @@ export default function Leases() {
           )}
         </CardContent>
       </Card>
+
+      {/* Lease Documents Dialog */}
+      <LeaseDocumentsDialog
+        open={documentsDialogOpen}
+        onOpenChange={setDocumentsDialogOpen}
+        tenant={selectedLeaseForDocs ? { id: selectedLeaseForDocs.tenantId, name: selectedLeaseForDocs.tenantName } : null}
+        leaseId={selectedLeaseForDocs?.leaseId}
+      />
     </div>
   );
 }
