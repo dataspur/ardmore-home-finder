@@ -29,6 +29,7 @@ import Tenants from "./pages/admin/Tenants";
 import Properties from "./pages/admin/Properties";
 import Leases from "./pages/admin/Leases";
 import Payments from "./pages/admin/Payments";
+import Settings from "./pages/admin/Settings";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,7 @@ const App = () => (
             <Route path="properties" element={<Properties />} />
             <Route path="leases" element={<Leases />} />
             <Route path="payments" element={<Payments />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
