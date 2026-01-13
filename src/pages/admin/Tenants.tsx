@@ -30,12 +30,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Loader2, Copy, DollarSign, Trash2, FileText, CalendarIcon } from "lucide-react";
+import { Plus, Pencil, Loader2, Copy, DollarSign, Trash2, FileText, CalendarIcon, Upload } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { LeaseDocumentsDialog } from "@/components/admin/LeaseDocumentsDialog";
+import { RentRollImportDialog } from "@/components/admin/RentRollImportDialog";
 
 interface Tenant {
   id: string;
@@ -88,6 +89,7 @@ export default function Tenants() {
   const [tenantToDeactivate, setTenantToDeactivate] = useState<TenantWithLease | null>(null);
   const [documentsDialogOpen, setDocumentsDialogOpen] = useState(false);
   const [selectedTenantForDocs, setSelectedTenantForDocs] = useState<{ id: string; name: string } | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchTenantsWithLeases = async () => {
@@ -310,13 +312,18 @@ export default function Tenants() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Tenants</h1>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openNewDialog}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Tenant
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Import Rent Roll
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={openNewDialog}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Tenant
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>{editingTenant ? "Edit Tenant" : "Add New Tenant"}</DialogTitle>
@@ -425,6 +432,7 @@ export default function Tenants() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>
@@ -545,6 +553,13 @@ export default function Tenants() {
         onOpenChange={setDocumentsDialogOpen}
         tenant={selectedTenantForDocs}
         leaseId={selectedTenantForDocs ? tenantsWithLeases.find(t => t.id === selectedTenantForDocs.id)?.lease?.id : undefined}
+      />
+
+      {/* Rent Roll Import Dialog */}
+      <RentRollImportDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        onImportComplete={fetchTenantsWithLeases}
       />
     </div>
   );
