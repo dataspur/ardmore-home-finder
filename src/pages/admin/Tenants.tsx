@@ -30,12 +30,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Loader2, Copy, DollarSign, Trash2 } from "lucide-react";
+import { Plus, Pencil, Loader2, Copy, DollarSign, Trash2, FileText, CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { CalendarIcon } from "lucide-react";
+import { LeaseDocumentsDialog } from "@/components/admin/LeaseDocumentsDialog";
 
 interface Tenant {
   id: string;
@@ -86,6 +86,8 @@ export default function Tenants() {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
   const [tenantToDeactivate, setTenantToDeactivate] = useState<TenantWithLease | null>(null);
+  const [documentsDialogOpen, setDocumentsDialogOpen] = useState(false);
+  const [selectedTenantForDocs, setSelectedTenantForDocs] = useState<{ id: string; name: string } | null>(null);
   const { toast } = useToast();
 
   const fetchTenantsWithLeases = async () => {
@@ -294,6 +296,11 @@ export default function Tenants() {
     }
   };
 
+  const openDocumentsDialog = (tenant: TenantWithLease) => {
+    setSelectedTenantForDocs({ id: tenant.id, name: tenant.name });
+    setDocumentsDialogOpen(true);
+  };
+
   const openDeactivateDialog = (tenant: TenantWithLease) => {
     setTenantToDeactivate(tenant);
     setDeactivateDialogOpen(true);
@@ -478,6 +485,14 @@ export default function Tenants() {
                           >
                             <Copy className="h-4 w-4" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openDocumentsDialog(tenant)}
+                            title="Manage documents"
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
                           {tenant.lease && (
                             <Button
                               variant="ghost"
@@ -523,6 +538,14 @@ export default function Tenants() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Lease Documents Dialog */}
+      <LeaseDocumentsDialog
+        open={documentsDialogOpen}
+        onOpenChange={setDocumentsDialogOpen}
+        tenant={selectedTenantForDocs}
+        leaseId={selectedTenantForDocs ? tenantsWithLeases.find(t => t.id === selectedTenantForDocs.id)?.lease?.id : undefined}
+      />
     </div>
   );
 }
