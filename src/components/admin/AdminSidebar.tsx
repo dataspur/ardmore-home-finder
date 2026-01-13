@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import logo from "@/assets/logo.png";
 import { useAdminUnreadCounts } from "@/hooks/useAdminUnreadCounts";
 
+// Admin navigation items
 const navItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Messages", url: "/admin/messages", icon: MessageSquare },
