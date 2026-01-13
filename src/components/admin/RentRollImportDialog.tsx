@@ -28,7 +28,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Upload, FileSpreadsheet, Loader2, Check, AlertCircle, ArrowRight, ArrowLeft } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Upload, FileSpreadsheet, Loader2, Check, AlertCircle, ArrowRight, ArrowLeft, RefreshCw } from "lucide-react";
 
 interface RentRollImportDialogProps {
   open: boolean;
@@ -54,6 +55,9 @@ interface ParsedRow {
   due_date?: string;
   isValid: boolean;
   errors: string[];
+  isDuplicate: boolean;
+  existingTenantId?: string;
+  forceImport: boolean;
 }
 
 type ImportStep = "upload" | "mapping" | "preview" | "importing" | "complete";
@@ -90,7 +94,12 @@ export function RentRollImportDialog({
   });
   const [parsedData, setParsedData] = useState<ParsedRow[]>([]);
   const [isImporting, setIsImporting] = useState(false);
-  const [importResults, setImportResults] = useState<{ success: number; failed: number }>({ success: 0, failed: 0 });
+  const [importResults, setImportResults] = useState<{ success: number; updated: number; failed: number }>({ 
+    success: 0, 
+    updated: 0, 
+    failed: 0 
+  });
+  const [overrideAll, setOverrideAll] = useState(false);
   const { toast } = useToast();
 
   const resetState = () => {
@@ -108,7 +117,8 @@ export function RentRollImportDialog({
     });
     setParsedData([]);
     setIsImporting(false);
-    setImportResults({ success: 0, failed: 0 });
+    setImportResults({ success: 0, updated: 0, failed: 0 });
+    setOverrideAll(false);
   };
 
   const handleClose = () => {
@@ -139,9 +149,8 @@ export function RentRollImportDialog({
         
         // Auto-map columns based on common names
         const autoMapping: ColumnMapping = { ...columnMapping };
-        const headerLower = extractedHeaders.map(h => h.toLowerCase());
         
-        extractedHeaders.forEach((header, index) => {
+        extractedHeaders.forEach((header) => {
           const lower = header.toLowerCase();
           if (lower.includes("name") && !lower.includes("unit")) autoMapping.name = header;
           if (lower.includes("email") || lower.includes("e-mail")) autoMapping.email = header;
@@ -177,7 +186,22 @@ export function RentRollImportDialog({
     }
   };
 
-  const validateAndPrepareData = () => {
+  const validateAndPrepareData = async () => {
+    // Fetch existing tenant emails for duplicate detection
+    const { data: existingTenants, error } = await supabase
+      .from("tenants")
+      .select("id, email");
+    
+    if (error) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to check for existing tenants" });
+      return;
+    }
+
+    const existingEmailMap = new Map<string, string>();
+    existingTenants?.forEach(tenant => {
+      existingEmailMap.set(tenant.email.toLowerCase(), tenant.id);
+    });
+
     const prepared: ParsedRow[] = rawData.map((row) => {
       const errors: string[] = [];
       
@@ -226,6 +250,10 @@ export function RentRollImportDialog({
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push("Invalid email format");
       if (!property_address) errors.push("Property address is required");
       if (!rent_amount || rent_amount <= 0) errors.push("Valid rent amount is required");
+
+      // Check for duplicates
+      const existingTenantId = email ? existingEmailMap.get(email.toLowerCase()) : undefined;
+      const isDuplicate = !!existingTenantId;
       
       return {
         name,
@@ -236,6 +264,9 @@ export function RentRollImportDialog({
         due_date,
         isValid: errors.length === 0,
         errors,
+        isDuplicate,
+        existingTenantId,
+        forceImport: false,
       };
     });
     
@@ -247,67 +278,139 @@ export function RentRollImportDialog({
     return REQUIRED_FIELDS.every((field) => columnMapping[field]);
   };
 
+  const toggleForceImport = (index: number) => {
+    setParsedData(prev => prev.map((row, i) => 
+      i === index ? { ...row, forceImport: !row.forceImport } : row
+    ));
+  };
+
+  const handleOverrideAll = (checked: boolean) => {
+    setOverrideAll(checked);
+    setParsedData(prev => prev.map(row => 
+      row.isDuplicate && row.isValid ? { ...row, forceImport: checked } : row
+    ));
+  };
+
   const handleImport = async () => {
     setIsImporting(true);
     setStep("importing");
     
-    const validRows = parsedData.filter((row) => row.isValid);
+    // Get rows that are either new valid rows OR duplicates with forceImport enabled
+    const rowsToProcess = parsedData.filter((row) => 
+      row.isValid && (!row.isDuplicate || row.forceImport)
+    );
+    
     let successCount = 0;
+    let updatedCount = 0;
     let failedCount = 0;
     
-    for (const row of validRows) {
+    for (const row of rowsToProcess) {
       try {
-        // Create tenant
-        const { data: tenant, error: tenantError } = await supabase
-          .from("tenants")
-          .insert({
-            name: row.name!,
-            email: row.email!,
-          })
-          .select()
-          .single();
-        
-        if (tenantError) {
-          failedCount++;
-          continue;
+        if (row.isDuplicate && row.forceImport && row.existingTenantId) {
+          // Update existing tenant's name if different
+          await supabase
+            .from("tenants")
+            .update({ name: row.name! })
+            .eq("id", row.existingTenantId);
+
+          // Check for existing active lease
+          const { data: existingLeases } = await supabase
+            .from("leases")
+            .select("id")
+            .eq("tenant_id", row.existingTenantId)
+            .eq("status", "active");
+
+          if (existingLeases && existingLeases.length > 0) {
+            // Update existing lease
+            const { error: leaseError } = await supabase
+              .from("leases")
+              .update({
+                property_address: row.property_address!,
+                unit_number: row.unit_number || null,
+                rent_amount_cents: Math.round(row.rent_amount! * 100),
+                due_date: row.due_date!,
+              })
+              .eq("id", existingLeases[0].id);
+
+            if (leaseError) {
+              failedCount++;
+              continue;
+            }
+          } else {
+            // Create new lease for existing tenant
+            const { error: leaseError } = await supabase
+              .from("leases")
+              .insert({
+                tenant_id: row.existingTenantId,
+                property_address: row.property_address!,
+                unit_number: row.unit_number || null,
+                rent_amount_cents: Math.round(row.rent_amount! * 100),
+                due_date: row.due_date!,
+                status: "active",
+              });
+
+            if (leaseError) {
+              failedCount++;
+              continue;
+            }
+          }
+          updatedCount++;
+        } else {
+          // Create new tenant
+          const { data: tenant, error: tenantError } = await supabase
+            .from("tenants")
+            .insert({
+              name: row.name!,
+              email: row.email!,
+            })
+            .select()
+            .single();
+          
+          if (tenantError) {
+            failedCount++;
+            continue;
+          }
+          
+          // Create lease
+          const { error: leaseError } = await supabase
+            .from("leases")
+            .insert({
+              tenant_id: tenant.id,
+              property_address: row.property_address!,
+              unit_number: row.unit_number || null,
+              rent_amount_cents: Math.round(row.rent_amount! * 100),
+              due_date: row.due_date!,
+              status: "active",
+            });
+          
+          if (leaseError) {
+            // Rollback tenant if lease fails
+            await supabase.from("tenants").delete().eq("id", tenant.id);
+            failedCount++;
+            continue;
+          }
+          
+          successCount++;
         }
-        
-        // Create lease
-        const { error: leaseError } = await supabase
-          .from("leases")
-          .insert({
-            tenant_id: tenant.id,
-            property_address: row.property_address!,
-            unit_number: row.unit_number || null,
-            rent_amount_cents: Math.round(row.rent_amount! * 100),
-            due_date: row.due_date!,
-            status: "active",
-          });
-        
-        if (leaseError) {
-          // Rollback tenant if lease fails
-          await supabase.from("tenants").delete().eq("id", tenant.id);
-          failedCount++;
-          continue;
-        }
-        
-        successCount++;
       } catch (error) {
         failedCount++;
       }
     }
     
-    setImportResults({ success: successCount, failed: failedCount });
+    setImportResults({ success: successCount, updated: updatedCount, failed: failedCount });
     setStep("complete");
     setIsImporting(false);
     
-    if (successCount > 0) {
+    if (successCount > 0 || updatedCount > 0) {
       onImportComplete();
     }
   };
 
-  const validCount = parsedData.filter((r) => r.isValid).length;
+  const validCount = parsedData.filter((r) => r.isValid && !r.isDuplicate).length;
   const invalidCount = parsedData.filter((r) => !r.isValid).length;
+  const duplicateCount = parsedData.filter((r) => r.isValid && r.isDuplicate).length;
+  const overrideCount = parsedData.filter((r) => r.isDuplicate && r.forceImport).length;
+  const totalToImport = validCount + overrideCount;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -425,16 +528,43 @@ export function RentRollImportDialog({
         {/* Preview Step */}
         {step === "preview" && (
           <div className="space-y-4 flex-1 min-h-0 flex flex-col">
-            <div className="flex items-center gap-4">
-              <Badge variant="default" className="bg-green-500">
-                <Check className="h-3 w-3 mr-1" />
-                {validCount} valid
-              </Badge>
-              {invalidCount > 0 && (
-                <Badge variant="destructive">
-                  <AlertCircle className="h-3 w-3 mr-1" />
-                  {invalidCount} with errors
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="default" className="bg-green-500">
+                  <Check className="h-3 w-3 mr-1" />
+                  {validCount} new
                 </Badge>
+                {duplicateCount > 0 && (
+                  <Badge variant="secondary" className="bg-amber-500/20 text-amber-700 border-amber-500/30">
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    {duplicateCount} duplicate{duplicateCount !== 1 ? "s" : ""}
+                  </Badge>
+                )}
+                {overrideCount > 0 && (
+                  <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 border-blue-500/30">
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    {overrideCount} will update
+                  </Badge>
+                )}
+                {invalidCount > 0 && (
+                  <Badge variant="destructive">
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    {invalidCount} invalid
+                  </Badge>
+                )}
+              </div>
+              
+              {duplicateCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="override-all"
+                    checked={overrideAll}
+                    onCheckedChange={(checked) => handleOverrideAll(checked as boolean)}
+                  />
+                  <Label htmlFor="override-all" className="text-sm cursor-pointer">
+                    Override all duplicates
+                  </Label>
+                </div>
               )}
             </div>
 
@@ -442,23 +572,49 @@ export function RentRollImportDialog({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[60px]">Status</TableHead>
+                    <TableHead className="w-[100px]">Status</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Property</TableHead>
                     <TableHead>Unit</TableHead>
                     <TableHead>Rent</TableHead>
                     <TableHead>Due Date</TableHead>
+                    <TableHead className="w-[100px]">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {parsedData.map((row, index) => (
-                    <TableRow key={index} className={!row.isValid ? "bg-destructive/10" : ""}>
+                    <TableRow 
+                      key={index} 
+                      className={
+                        !row.isValid 
+                          ? "bg-destructive/10" 
+                          : row.isDuplicate && row.forceImport 
+                            ? "bg-blue-500/10"
+                            : row.isDuplicate 
+                              ? "bg-amber-500/10" 
+                              : ""
+                      }
+                    >
                       <TableCell>
-                        {row.isValid ? (
-                          <Check className="h-4 w-4 text-green-500" />
+                        {!row.isValid ? (
+                          <Badge variant="destructive" className="text-xs">
+                            Invalid
+                          </Badge>
+                        ) : row.isDuplicate && row.forceImport ? (
+                          <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 border-blue-500/30 text-xs">
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                            Update
+                          </Badge>
+                        ) : row.isDuplicate ? (
+                          <Badge variant="secondary" className="bg-amber-500/20 text-amber-700 border-amber-500/30 text-xs">
+                            Duplicate
+                          </Badge>
                         ) : (
-                          <AlertCircle className="h-4 w-4 text-destructive" />
+                          <Badge variant="default" className="bg-green-500 text-xs">
+                            <Check className="h-3 w-3 mr-1" />
+                            New
+                          </Badge>
                         )}
                       </TableCell>
                       <TableCell className="font-medium">{row.name || "-"}</TableCell>
@@ -469,6 +625,18 @@ export function RentRollImportDialog({
                         {row.rent_amount ? `$${row.rent_amount.toFixed(2)}` : "-"}
                       </TableCell>
                       <TableCell>{row.due_date || "-"}</TableCell>
+                      <TableCell>
+                        {row.isValid && row.isDuplicate && (
+                          <Button
+                            variant={row.forceImport ? "outline" : "secondary"}
+                            size="sm"
+                            onClick={() => toggleForceImport(index)}
+                            className="text-xs h-7"
+                          >
+                            {row.forceImport ? "Cancel" : "Override"}
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -480,8 +648,8 @@ export function RentRollImportDialog({
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Button>
-              <Button onClick={handleImport} disabled={validCount === 0}>
-                Import {validCount} Tenant{validCount !== 1 ? "s" : ""}
+              <Button onClick={handleImport} disabled={totalToImport === 0}>
+                Import {totalToImport} Tenant{totalToImport !== 1 ? "s" : ""}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
@@ -504,10 +672,19 @@ export function RentRollImportDialog({
               <Check className="h-8 w-8 text-green-600" />
             </div>
             <p className="text-lg font-medium mb-2">Import Complete</p>
-            <div className="flex items-center gap-4 mb-6">
-              <Badge variant="default" className="bg-green-500">
-                {importResults.success} imported
-              </Badge>
+            <div className="flex items-center gap-2 flex-wrap justify-center mb-6">
+              {importResults.success > 0 && (
+                <Badge variant="default" className="bg-green-500">
+                  <Check className="h-3 w-3 mr-1" />
+                  {importResults.success} new imported
+                </Badge>
+              )}
+              {importResults.updated > 0 && (
+                <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 border-blue-500/30">
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  {importResults.updated} updated
+                </Badge>
+              )}
               {importResults.failed > 0 && (
                 <Badge variant="destructive">{importResults.failed} failed</Badge>
               )}
