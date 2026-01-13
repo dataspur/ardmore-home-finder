@@ -84,35 +84,78 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create the new admin user using admin API
+    // Try to create the new admin user using admin API
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
       email_confirm: true, // Auto-confirm the email
     });
 
+    let userId: string;
+    let isExistingUser = false;
+
     if (createError) {
-      // Check if user already exists
+      // Check if user already exists - if so, promote them to admin
       if (createError.message.includes("already been registered")) {
-        return new Response(
-          JSON.stringify({ error: "A user with this email already exists" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        // Find the existing user by email
+        const { data: usersData, error: listError } = await adminClient.auth.admin.listUsers();
+        
+        if (listError) {
+          throw listError;
+        }
+
+        const existingUser = usersData.users.find(
+          (u) => u.email?.toLowerCase() === email.toLowerCase()
         );
+
+        if (!existingUser) {
+          return new Response(
+            JSON.stringify({ error: "User exists but could not be found. Please try again." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Check if user is already an admin
+        const { data: existingRole } = await adminClient
+          .from("user_roles")
+          .select("id")
+          .eq("user_id", existingUser.id)
+          .eq("role", "admin")
+          .single();
+
+        if (existingRole) {
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: "User is already an admin",
+              user_id: existingUser.id 
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        userId = existingUser.id;
+        isExistingUser = true;
+      } else {
+        throw createError;
       }
-      throw createError;
+    } else {
+      userId = newUser.user.id;
     }
 
-    // Assign admin role to the new user
+    // Assign admin role to the user
     const { error: roleInsertError } = await adminClient
       .from("user_roles")
       .insert({
-        user_id: newUser.user.id,
+        user_id: userId,
         role: "admin",
       });
 
     if (roleInsertError) {
-      // Rollback: delete the created user if role assignment fails
-      await adminClient.auth.admin.deleteUser(newUser.user.id);
+      // Rollback: only delete user if we just created them
+      if (!isExistingUser) {
+        await adminClient.auth.admin.deleteUser(userId);
+      }
       throw roleInsertError;
     }
 
@@ -131,11 +174,15 @@ Deno.serve(async (req) => {
       // Don't fail the whole operation for this
     }
 
+    const message = isExistingUser 
+      ? "Existing user promoted to admin. They can log in with their existing password."
+      : "Admin user created successfully";
+
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Admin user created successfully",
-        user_id: newUser.user.id 
+        message,
+        user_id: userId 
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
