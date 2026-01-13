@@ -119,8 +119,6 @@ const Settings = () => {
     setIsInviting(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
       const response = await supabase.functions.invoke("create-admin-user", {
         body: {
           email: inviteEmail,
@@ -129,16 +127,33 @@ const Settings = () => {
       });
 
       if (response.error) {
-        throw new Error(response.error.message || "Failed to create admin user");
+        // Try to extract the actual error message from the response
+        let errorMessage = "Failed to create admin user";
+        try {
+          if (response.error.context) {
+            const errorData = await response.error.context.json();
+            errorMessage = errorData.error || errorMessage;
+          }
+        } catch {
+          errorMessage = response.error.message || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       if (response.data?.error) {
         throw new Error(response.data.error);
       }
 
+      // Use the message from the backend for clarity
+      const successMessage = response.data?.message || "Admin access granted";
+      const isPromotion = successMessage.toLowerCase().includes("promoted") || 
+                          successMessage.toLowerCase().includes("existing");
+
       toast({
-        title: "Admin user created",
-        description: `${inviteEmail} can now log in with the temporary password. Remind them to change it.`,
+        title: isPromotion ? "Admin access granted" : "Admin user created",
+        description: isPromotion 
+          ? `${inviteEmail} now has admin access with their existing password.`
+          : `${inviteEmail} can now log in with the temporary password. Remind them to change it.`,
       });
 
       // Clear form
