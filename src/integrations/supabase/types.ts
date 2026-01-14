@@ -396,68 +396,104 @@ export type Database = {
       properties: {
         Row: {
           address: string
+          available_date: string | null
           badge: string | null
           bathrooms: number | null
           bedrooms: number | null
           city: string | null
+          cooling_type: string | null
           created_at: string | null
+          deposit_cents: number | null
+          description: string | null
+          garage_spaces: number | null
+          heating_type: string | null
+          hoa_fee_cents: number | null
           id: string
           image_url: string | null
           is_active: boolean | null
           is_featured: boolean | null
           latitude: number | null
           longitude: number | null
+          lot_size_sqft: number | null
+          pet_policy: string | null
           price_cents: number
           price_display: string
+          property_subtype: string | null
           property_type: string
           size_sqft: number | null
           state: string | null
           title: string
           updated_at: string | null
+          virtual_tour_url: string | null
+          year_built: number | null
           zip_code: string | null
         }
         Insert: {
           address: string
+          available_date?: string | null
           badge?: string | null
           bathrooms?: number | null
           bedrooms?: number | null
           city?: string | null
+          cooling_type?: string | null
           created_at?: string | null
+          deposit_cents?: number | null
+          description?: string | null
+          garage_spaces?: number | null
+          heating_type?: string | null
+          hoa_fee_cents?: number | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
           is_featured?: boolean | null
           latitude?: number | null
           longitude?: number | null
+          lot_size_sqft?: number | null
+          pet_policy?: string | null
           price_cents: number
           price_display: string
+          property_subtype?: string | null
           property_type: string
           size_sqft?: number | null
           state?: string | null
           title: string
           updated_at?: string | null
+          virtual_tour_url?: string | null
+          year_built?: number | null
           zip_code?: string | null
         }
         Update: {
           address?: string
+          available_date?: string | null
           badge?: string | null
           bathrooms?: number | null
           bedrooms?: number | null
           city?: string | null
+          cooling_type?: string | null
           created_at?: string | null
+          deposit_cents?: number | null
+          description?: string | null
+          garage_spaces?: number | null
+          heating_type?: string | null
+          hoa_fee_cents?: number | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
           is_featured?: boolean | null
           latitude?: number | null
           longitude?: number | null
+          lot_size_sqft?: number | null
+          pet_policy?: string | null
           price_cents?: number
           price_display?: string
+          property_subtype?: string | null
           property_type?: string
           size_sqft?: number | null
           state?: string | null
           title?: string
           updated_at?: string | null
+          virtual_tour_url?: string | null
+          year_built?: number | null
           zip_code?: string | null
         }
         Relationships: []
