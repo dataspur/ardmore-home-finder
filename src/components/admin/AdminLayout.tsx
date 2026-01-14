@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "./AdminSidebar";
+import { AdminChatWidget } from "./AdminChatWidget";
 
 export function AdminLayout() {
   return (
@@ -16,6 +17,7 @@ export function AdminLayout() {
             <Outlet />
           </div>
         </main>
+        <AdminChatWidget />
       </div>
     </SidebarProvider>
   );
