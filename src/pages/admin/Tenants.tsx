@@ -30,7 +30,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Loader2, Copy, DollarSign, Trash2, FileText, CalendarIcon, Upload, Check, X } from "lucide-react";
+import { Plus, Pencil, Loader2, Copy, DollarSign, Trash2, FileText, CalendarIcon, Upload, Check, X, Search } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -91,7 +92,28 @@ export default function Tenants() {
   const [documentsDialogOpen, setDocumentsDialogOpen] = useState(false);
   const [selectedTenantForDocs, setSelectedTenantForDocs] = useState<{ id: string; name: string } | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState<"all" | "paid" | "unpaid">("all");
   const { toast } = useToast();
+
+  // Filter tenants based on search and payment status
+  const filteredTenants = tenantsWithLeases.filter((tenant) => {
+    // Search filter - match name, email, or property address
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch =
+      searchQuery === "" ||
+      tenant.name.toLowerCase().includes(searchLower) ||
+      tenant.email.toLowerCase().includes(searchLower) ||
+      (tenant.lease?.property_address?.toLowerCase().includes(searchLower) ?? false);
+
+    // Payment status filter
+    const matchesPaymentFilter =
+      paymentFilter === "all" ||
+      (paymentFilter === "paid" && tenant.isPaid) ||
+      (paymentFilter === "unpaid" && !tenant.isPaid && tenant.lease);
+
+    return matchesSearch && matchesPaymentFilter;
+  });
 
   const fetchTenantsWithLeases = async () => {
     // Fetch tenants
@@ -454,6 +476,40 @@ export default function Tenants() {
         </div>
       </div>
 
+      {/* Search and Filter Controls */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        {/* Search Input */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name, email, or property..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        {/* Payment Filter Toggle */}
+        <ToggleGroup
+          type="single"
+          value={paymentFilter}
+          onValueChange={(value) => value && setPaymentFilter(value as "all" | "paid" | "unpaid")}
+          className="justify-start"
+        >
+          <ToggleGroupItem value="all" aria-label="Show all tenants">
+            All
+          </ToggleGroupItem>
+          <ToggleGroupItem value="paid" aria-label="Show paid tenants">
+            <Check className="h-4 w-4 mr-1" />
+            Paid
+          </ToggleGroupItem>
+          <ToggleGroupItem value="unpaid" aria-label="Show unpaid tenants">
+            <X className="h-4 w-4 mr-1" />
+            Unpaid
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>All Tenants</CardTitle>
@@ -463,8 +519,12 @@ export default function Tenants() {
             <div className="flex justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
-          ) : tenantsWithLeases.length === 0 ? (
-            <p className="text-center py-8 text-muted-foreground">No tenants yet</p>
+          ) : filteredTenants.length === 0 ? (
+            <p className="text-center py-8 text-muted-foreground">
+              {tenantsWithLeases.length === 0
+                ? "No tenants yet"
+                : "No tenants match your search or filter criteria"}
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -480,7 +540,7 @@ export default function Tenants() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {tenantsWithLeases.map((tenant) => (
+                  {filteredTenants.map((tenant) => (
                     <TableRow key={tenant.id}>
                       <TableCell className="font-medium">{tenant.name}</TableCell>
                       <TableCell>{tenant.email}</TableCell>
