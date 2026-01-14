@@ -30,7 +30,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Loader2, Copy, DollarSign, Trash2, FileText, CalendarIcon, Upload, Check, X, Search } from "lucide-react";
+import { Plus, Pencil, Loader2, Copy, DollarSign, Trash2, FileText, CalendarIcon, Upload, Check, X, Search, Download } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import * as XLSX from "xlsx";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -497,12 +504,83 @@ export default function Tenants() {
       toast({ variant: "destructive", title: "Error", description: error.message || "Failed to update payment status" });
     }
   };
+  const getExportData = () => {
+    return filteredTenants.map((tenant) => ({
+      Name: tenant.name,
+      Email: tenant.email,
+      "Property Address": tenant.lease?.property_address || "",
+      "Unit Number": tenant.lease?.unit_number || "",
+      "Monthly Rent": tenant.lease ? (tenant.lease.rent_amount_cents / 100).toFixed(2) : "",
+      "Due Date": tenant.lease?.due_date || "",
+      Status: tenant.lease ? (tenant.isPaid ? "Paid" : "Unpaid") : "No Active Lease",
+      "Created At": tenant.created_at ? format(new Date(tenant.created_at), "yyyy-MM-dd") : "",
+    }));
+  };
+
+  const exportToCSV = () => {
+    const data = getExportData();
+    if (data.length === 0) {
+      toast({ variant: "destructive", title: "Error", description: "No data to export" });
+      return;
+    }
+
+    const headers = Object.keys(data[0]);
+    const csvContent = [
+      headers.join(","),
+      ...data.map((row) =>
+        headers.map((header) => {
+          const value = row[header as keyof typeof row] || "";
+          // Escape quotes and wrap in quotes if contains comma
+          const escaped = String(value).replace(/"/g, '""');
+          return escaped.includes(",") || escaped.includes('"') ? `"${escaped}"` : escaped;
+        }).join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `tenants-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    toast({ title: "Exported", description: "CSV file downloaded" });
+  };
+
+  const exportToExcel = () => {
+    const data = getExportData();
+    if (data.length === 0) {
+      toast({ variant: "destructive", title: "Error", description: "No data to export" });
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Tenants");
+    XLSX.writeFile(workbook, `tenants-${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+    toast({ title: "Exported", description: "Excel file downloaded" });
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Tenants</h1>
         <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={exportToCSV}>
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportToExcel}>
+                Export as Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
             <Upload className="h-4 w-4 mr-2" />
             Import Rent Roll
