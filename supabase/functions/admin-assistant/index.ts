@@ -212,6 +212,39 @@ const tools = [
         required: ["query"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "prepare_image_upload",
+      description: "Prepare to add images to a property listing. Call this when the user wants to add or upload photos/images to a specific property. Returns the property details and triggers the image upload UI in the chat.",
+      parameters: {
+        type: "object",
+        properties: {
+          property_address: { type: "string", description: "The address or partial address to search for" },
+          property_id: { type: "string", description: "Direct property UUID if known" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "save_property_images",
+      description: "Save uploaded images to a property listing. Called after images have been uploaded to storage.",
+      parameters: {
+        type: "object",
+        properties: {
+          property_id: { type: "string", description: "The property UUID to attach images to" },
+          image_urls: { 
+            type: "array", 
+            items: { type: "string" },
+            description: "Array of image URLs that have been uploaded to storage" 
+          }
+        },
+        required: ["property_id", "image_urls"]
+      }
+    }
   }
 ];
 
@@ -536,6 +569,106 @@ async function executeTool(name: string, args: Record<string, unknown>): Promise
             properties: propertiesResult.data || [],
             managed_properties: managedResult.data || []
           }
+        });
+      }
+
+      case "prepare_image_upload": {
+        const { property_address, property_id } = args;
+        
+        let property;
+        if (property_id) {
+          const { data, error } = await supabase
+            .from("properties")
+            .select("id, title, address, image_url")
+            .eq("id", property_id)
+            .single();
+          if (error) throw error;
+          property = data;
+        } else if (property_address) {
+          const { data, error } = await supabase
+            .from("properties")
+            .select("id, title, address, image_url")
+            .ilike("address", `%${property_address}%`)
+            .limit(1)
+            .single();
+          if (error && error.code !== "PGRST116") throw error;
+          property = data;
+        }
+        
+        if (!property) {
+          return JSON.stringify({
+            success: false,
+            error: "Property not found. Please provide a valid address or property ID."
+          });
+        }
+
+        // Get existing images count
+        const { count } = await supabase
+          .from("property_images")
+          .select("*", { count: "exact", head: true })
+          .eq("property_id", property.id);
+
+        return JSON.stringify({
+          success: true,
+          action: "request_image_upload",
+          property: {
+            id: property.id,
+            title: property.title,
+            address: property.address,
+            current_image: property.image_url,
+            existing_images_count: count || 0
+          },
+          message: `Ready to add images to "${property.title}" at ${property.address}. Please select and upload your images.`
+        });
+      }
+
+      case "save_property_images": {
+        const { property_id, image_urls } = args;
+        
+        if (!property_id || !image_urls || !Array.isArray(image_urls) || image_urls.length === 0) {
+          return JSON.stringify({
+            success: false,
+            error: "Property ID and at least one image URL are required."
+          });
+        }
+
+        // Get the current max display order
+        const { data: existingImages } = await supabase
+          .from("property_images")
+          .select("display_order")
+          .eq("property_id", property_id)
+          .order("display_order", { ascending: false })
+          .limit(1);
+        
+        let nextOrder = (existingImages && existingImages[0]?.display_order + 1) || 0;
+        const isFirstImage = nextOrder === 0;
+
+        // Insert all new images
+        const imagesToInsert = image_urls.map((url, index) => ({
+          property_id,
+          image_url: url,
+          display_order: nextOrder + index,
+          is_primary: isFirstImage && index === 0
+        }));
+
+        const { error: insertError } = await supabase
+          .from("property_images")
+          .insert(imagesToInsert);
+        
+        if (insertError) throw insertError;
+
+        // If this is the first image, also update the main property image_url
+        if (isFirstImage && image_urls.length > 0) {
+          await supabase
+            .from("properties")
+            .update({ image_url: image_urls[0] })
+            .eq("id", property_id);
+        }
+
+        return JSON.stringify({
+          success: true,
+          message: `Successfully added ${image_urls.length} image(s) to the property.`,
+          images_added: image_urls.length
         });
       }
 
