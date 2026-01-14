@@ -94,6 +94,8 @@ export default function Tenants() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<"all" | "paid" | "unpaid">("all");
+  const [editingCell, setEditingCell] = useState<{ tenantId: string; field: string } | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
   const { toast } = useToast();
 
   // Filter tenants based on search and payment status
@@ -354,6 +356,109 @@ export default function Tenants() {
     setDeactivateDialogOpen(true);
   };
 
+  // Inline editing functions
+  const startEditing = (tenantId: string, field: string, currentValue: string) => {
+    setEditingCell({ tenantId, field });
+    setEditValue(currentValue);
+  };
+
+  const saveInlineEdit = async (tenantId: string, field: string, value: string) => {
+    try {
+      const tenant = tenantsWithLeases.find((t) => t.id === tenantId);
+      if (!tenant) return;
+
+      if (field === "name" || field === "email") {
+        const { error } = await supabase
+          .from("tenants")
+          .update({ [field]: value })
+          .eq("id", tenantId);
+        if (error) throw error;
+      } else if (tenant.lease) {
+        if (field === "property_address") {
+          const { error } = await supabase
+            .from("leases")
+            .update({ property_address: value })
+            .eq("id", tenant.lease.id);
+          if (error) throw error;
+        } else if (field === "rent") {
+          const rentCents = Math.round(parseFloat(value) * 100);
+          if (isNaN(rentCents) || rentCents <= 0) {
+            toast({ variant: "destructive", title: "Error", description: "Invalid rent amount" });
+            return;
+          }
+          const { error } = await supabase
+            .from("leases")
+            .update({ rent_amount_cents: rentCents })
+            .eq("id", tenant.lease.id);
+          if (error) throw error;
+        }
+      }
+
+      fetchTenantsWithLeases();
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to save" });
+    }
+  };
+
+  const saveAndClose = async (tenantId: string, field: string) => {
+    await saveInlineEdit(tenantId, field, editValue);
+    setEditingCell(null);
+    setEditValue("");
+  };
+
+  const saveDueDate = async (tenant: TenantWithLease, date: Date) => {
+    if (!tenant.lease) return;
+    try {
+      const { error } = await supabase
+        .from("leases")
+        .update({ due_date: format(date, "yyyy-MM-dd") })
+        .eq("id", tenant.lease.id);
+      if (error) throw error;
+      fetchTenantsWithLeases();
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to save due date" });
+    }
+  };
+
+  const togglePaidStatus = async (tenant: TenantWithLease) => {
+    if (!tenant.lease) return;
+    
+    try {
+      if (tenant.isPaid) {
+        // Mark as unpaid - delete the payment record for this month
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        
+        const { error } = await supabase
+          .from("payments")
+          .delete()
+          .eq("lease_id", tenant.lease.id)
+          .eq("status", "paid")
+          .gte("created_at", startOfMonth.toISOString());
+        
+        if (error) throw error;
+        toast({ title: "Updated", description: "Marked as unpaid" });
+      } else {
+        // Mark as paid - create a payment record
+        const { error } = await supabase
+          .from("payments")
+          .insert({
+            lease_id: tenant.lease.id,
+            amount_cents: tenant.lease.rent_amount_cents,
+            status: "paid",
+          });
+        
+        if (error) throw error;
+        toast({ title: "Updated", description: "Marked as paid" });
+      }
+      
+      fetchTenantsWithLeases();
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to update payment status" });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -547,27 +652,138 @@ export default function Tenants() {
                 <TableBody>
                   {filteredTenants.map((tenant) => (
                     <TableRow key={tenant.id}>
-                      <TableCell className="font-medium">{tenant.name}</TableCell>
-                      <TableCell>{tenant.email}</TableCell>
-                      <TableCell>{tenant.lease?.property_address || "-"}</TableCell>
+                      {/* Name - Inline Editable */}
+                      <TableCell 
+                        className="font-medium cursor-pointer hover:bg-muted/50"
+                        onClick={() => editingCell?.tenantId !== tenant.id || editingCell?.field !== "name" ? startEditing(tenant.id, "name", tenant.name) : undefined}
+                      >
+                        {editingCell?.tenantId === tenant.id && editingCell?.field === "name" ? (
+                          <Input
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={() => saveAndClose(tenant.id, "name")}
+                            onKeyDown={(e) => e.key === "Enter" && saveAndClose(tenant.id, "name")}
+                            autoFocus
+                            className="h-8 w-full"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        ) : (
+                          tenant.name
+                        )}
+                      </TableCell>
+
+                      {/* Email - Inline Editable */}
+                      <TableCell 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => editingCell?.tenantId !== tenant.id || editingCell?.field !== "email" ? startEditing(tenant.id, "email", tenant.email) : undefined}
+                      >
+                        {editingCell?.tenantId === tenant.id && editingCell?.field === "email" ? (
+                          <Input
+                            type="email"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={() => saveAndClose(tenant.id, "email")}
+                            onKeyDown={(e) => e.key === "Enter" && saveAndClose(tenant.id, "email")}
+                            autoFocus
+                            className="h-8 w-full"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        ) : (
+                          tenant.email
+                        )}
+                      </TableCell>
+
+                      {/* Property - Inline Editable */}
+                      <TableCell 
+                        className={cn("cursor-pointer hover:bg-muted/50", !tenant.lease && "cursor-default")}
+                        onClick={() => tenant.lease && (editingCell?.tenantId !== tenant.id || editingCell?.field !== "property_address") ? startEditing(tenant.id, "property_address", tenant.lease.property_address) : undefined}
+                      >
+                        {editingCell?.tenantId === tenant.id && editingCell?.field === "property_address" ? (
+                          <Input
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={() => saveAndClose(tenant.id, "property_address")}
+                            onKeyDown={(e) => e.key === "Enter" && saveAndClose(tenant.id, "property_address")}
+                            autoFocus
+                            className="h-8 w-full"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        ) : (
+                          tenant.lease?.property_address || "-"
+                        )}
+                      </TableCell>
+
+                      {/* Paid Status - Toggle Button */}
                       <TableCell>
                         {tenant.lease ? (
-                          tenant.isPaid ? (
-                            <Check className="h-5 w-5 text-green-600" />
-                          ) : (
-                            <X className="h-5 w-5 text-red-500" />
-                          )
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => togglePaidStatus(tenant)}
+                            className={cn(
+                              "h-8 w-8 p-0",
+                              tenant.isPaid ? "hover:bg-red-100" : "hover:bg-green-100"
+                            )}
+                            title={tenant.isPaid ? "Click to mark as unpaid" : "Click to mark as paid"}
+                          >
+                            {tenant.isPaid ? (
+                              <Check className="h-5 w-5 text-green-600" />
+                            ) : (
+                              <X className="h-5 w-5 text-red-500" />
+                            )}
+                          </Button>
                         ) : (
                           "-"
                         )}
                       </TableCell>
-                      <TableCell>
-                        {tenant.lease ? formatCurrency(tenant.lease.rent_amount_cents) : "-"}
+
+                      {/* Rent - Inline Editable */}
+                      <TableCell 
+                        className={cn("cursor-pointer hover:bg-muted/50", !tenant.lease && "cursor-default")}
+                        onClick={() => tenant.lease && (editingCell?.tenantId !== tenant.id || editingCell?.field !== "rent") ? startEditing(tenant.id, "rent", (tenant.lease.rent_amount_cents / 100).toString()) : undefined}
+                      >
+                        {editingCell?.tenantId === tenant.id && editingCell?.field === "rent" ? (
+                          <div className="relative" onClick={(e) => e.stopPropagation()}>
+                            <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onBlur={() => saveAndClose(tenant.id, "rent")}
+                              onKeyDown={(e) => e.key === "Enter" && saveAndClose(tenant.id, "rent")}
+                              autoFocus
+                              className="h-8 pl-7 w-28"
+                            />
+                          </div>
+                        ) : (
+                          tenant.lease ? formatCurrency(tenant.lease.rent_amount_cents) : "-"
+                        )}
                       </TableCell>
-                      <TableCell>
-                        {tenant.lease?.due_date
-                          ? new Date(tenant.lease.due_date).toLocaleDateString()
-                          : "-"}
+
+                      {/* Due Date - Calendar Picker */}
+                      <TableCell className={cn(!tenant.lease && "cursor-default")}>
+                        {tenant.lease ? (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 px-2 hover:bg-muted/50">
+                                {new Date(tenant.lease.due_date).toLocaleDateString()}
+                                <CalendarIcon className="ml-2 h-4 w-4" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={new Date(tenant.lease.due_date)}
+                                onSelect={(date) => date && saveDueDate(tenant, date)}
+                                className="pointer-events-auto"
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        ) : (
+                          "-"
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
