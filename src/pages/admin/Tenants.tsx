@@ -30,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Loader2, Copy, DollarSign, Trash2, FileText, CalendarIcon, Upload } from "lucide-react";
+import { Plus, Pencil, Loader2, Copy, DollarSign, Trash2, FileText, CalendarIcon, Upload, Check, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -58,6 +58,7 @@ interface Lease {
 
 interface TenantWithLease extends Tenant {
   lease?: Lease | null;
+  isPaid?: boolean;
 }
 
 interface FormData {
@@ -117,11 +118,29 @@ export default function Tenants() {
       return;
     }
 
-    // Join tenants with their leases
-    const combined: TenantWithLease[] = (tenants || []).map((tenant) => ({
-      ...tenant,
-      lease: leases?.find((lease) => lease.tenant_id === tenant.id) || null,
-    }));
+    // Fetch payments for current month to determine paid status
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const { data: payments } = await supabase
+      .from("payments")
+      .select("lease_id, status, created_at")
+      .eq("status", "paid")
+      .gte("created_at", startOfMonth.toISOString());
+
+    // Create a Set of lease IDs that have been paid this month
+    const paidLeaseIds = new Set(payments?.map((p) => p.lease_id) || []);
+
+    // Join tenants with their leases and payment status
+    const combined: TenantWithLease[] = (tenants || []).map((tenant) => {
+      const lease = leases?.find((l) => l.tenant_id === tenant.id) || null;
+      return {
+        ...tenant,
+        lease,
+        isPaid: lease ? paidLeaseIds.has(lease.id) : false,
+      };
+    });
 
     setTenantsWithLeases(combined);
     setIsLoading(false);
@@ -454,7 +473,7 @@ export default function Tenants() {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Property</TableHead>
-                    <TableHead>Unit</TableHead>
+                    <TableHead>Paid</TableHead>
                     <TableHead>Rent</TableHead>
                     <TableHead>Due Date</TableHead>
                     <TableHead className="w-[100px]">Actions</TableHead>
@@ -466,7 +485,17 @@ export default function Tenants() {
                       <TableCell className="font-medium">{tenant.name}</TableCell>
                       <TableCell>{tenant.email}</TableCell>
                       <TableCell>{tenant.lease?.property_address || "-"}</TableCell>
-                      <TableCell>{tenant.lease?.unit_number || "-"}</TableCell>
+                      <TableCell>
+                        {tenant.lease ? (
+                          tenant.isPaid ? (
+                            <Check className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <X className="h-5 w-5 text-red-500" />
+                          )
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
                       <TableCell>
                         {tenant.lease ? formatCurrency(tenant.lease.rent_amount_cents) : "-"}
                       </TableCell>
