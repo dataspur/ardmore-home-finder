@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, FileText, CreditCard, LogOut, MessageSquare, Building2, Settings } from "lucide-react";
+import { LayoutDashboard, Users, FileText, CreditCard, LogOut, MessageSquare, Building2, Settings, Home } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,7 @@ import { useAdminUnreadCounts } from "@/hooks/useAdminUnreadCounts";
 const navItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Messages", url: "/admin/messages", icon: MessageSquare },
+  { title: "Listings", url: "/admin/listings", icon: Home },
   { title: "Tenants", url: "/admin/tenants", icon: Users },
   { title: "Properties", url: "/admin/properties", icon: Building2 },
   { title: "Leases", url: "/admin/leases", icon: FileText },

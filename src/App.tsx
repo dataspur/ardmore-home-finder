@@ -27,6 +27,7 @@ import Dashboard from "./pages/admin/Dashboard";
 import Messages from "./pages/admin/Messages";
 import Tenants from "./pages/admin/Tenants";
 import Properties from "./pages/admin/Properties";
+import Listings from "./pages/admin/Listings";
 import Leases from "./pages/admin/Leases";
 import Payments from "./pages/admin/Payments";
 import Settings from "./pages/admin/Settings";
@@ -77,6 +78,7 @@ const App = () => (
           >
             <Route index element={<Dashboard />} />
             <Route path="messages" element={<Messages />} />
+            <Route path="listings" element={<Listings />} />
             <Route path="tenants" element={<Tenants />} />
             <Route path="properties" element={<Properties />} />
             <Route path="leases" element={<Leases />} />
