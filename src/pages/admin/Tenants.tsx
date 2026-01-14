@@ -89,6 +89,9 @@ export default function Tenants() {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
   const [tenantToDeactivate, setTenantToDeactivate] = useState<TenantWithLease | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [tenantToDelete, setTenantToDelete] = useState<TenantWithLease | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [documentsDialogOpen, setDocumentsDialogOpen] = useState(false);
   const [selectedTenantForDocs, setSelectedTenantForDocs] = useState<{ id: string; name: string } | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -354,6 +357,42 @@ export default function Tenants() {
   const openDeactivateDialog = (tenant: TenantWithLease) => {
     setTenantToDeactivate(tenant);
     setDeactivateDialogOpen(true);
+  };
+
+  const openDeleteDialog = (tenant: TenantWithLease) => {
+    setTenantToDelete(tenant);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteTenant = async () => {
+    if (!tenantToDelete) {
+      setDeleteDialogOpen(false);
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      // Delete the tenant - cascading will handle related records
+      const { error } = await supabase
+        .from("tenants")
+        .delete()
+        .eq("id", tenantToDelete.id);
+
+      if (error) throw error;
+
+      toast({ title: "Success", description: "Tenant deleted successfully" });
+      fetchTenantsWithLeases();
+    } catch (error: any) {
+      toast({ 
+        variant: "destructive", 
+        title: "Error", 
+        description: error.message || "Failed to delete tenant" 
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setTenantToDelete(null);
+    }
   };
 
   // Inline editing functions
@@ -837,12 +876,21 @@ export default function Tenants() {
                               variant="ghost"
                               size="icon"
                               onClick={() => openDeactivateDialog(tenant)}
-                              title="Deactivate tenant"
-                              className="text-destructive hover:text-destructive"
+                              title="Deactivate lease"
+                              className="text-amber-600 hover:text-amber-600"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <X className="h-4 w-4" />
                             </Button>
                           )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openDeleteDialog(tenant)}
+                            title="Delete tenant"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -873,6 +921,43 @@ export default function Tenants() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Deactivate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Tenant Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Tenant?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {tenantToDelete?.name} and all associated data including:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>All lease records</li>
+                <li>Payment history</li>
+                <li>Documents</li>
+                <li>Messages</li>
+              </ul>
+              <br />
+              <strong>This action cannot be undone.</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteTenant}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Permanently"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
