@@ -4,6 +4,7 @@ import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import PropertyInquiryDialog from "@/components/PropertyInquiryDialog";
+import PropertyDetailDialog from "@/components/PropertyDetailDialog";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { calculateDistance, formatDistance } from "@/lib/distance";
@@ -32,15 +33,15 @@ interface Property {
 const PropertyCard = ({ 
   listing, 
   index, 
-  onLearnMore,
   userLocation,
-  fallbackImage
+  fallbackImage,
+  onClick
 }: { 
   listing: Property; 
   index: number;
-  onLearnMore: (title: string) => void;
   userLocation: { latitude: number; longitude: number } | null;
   fallbackImage: string;
+  onClick: () => void;
 }) => {
   const { ref, isVisible } = useScrollAnimation();
 
@@ -57,7 +58,8 @@ const PropertyCard = ({
   return (
     <div 
       ref={ref}
-      className={`bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-elevated transition-all duration-500 hover:-translate-y-2 group ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+      onClick={onClick}
+      className={`bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-elevated transition-all duration-500 hover:-translate-y-2 group cursor-pointer ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
       style={{ transitionDelay: `${index * 100}ms` }}
     >
       <div className="h-56 overflow-hidden relative">
@@ -85,20 +87,16 @@ const PropertyCard = ({
         <h3 className="font-heading text-h3 text-foreground mb-2">{listing.title}</h3>
         <p className="font-heading text-price text-primary mb-1">{listing.price_display}</p>
         <p className="font-body text-muted-foreground mb-6">{listing.size_sqft ? `${listing.size_sqft.toLocaleString()} sq ft` : ""}</p>
-        <Button 
-          className="w-full min-h-[44px]" 
-          variant="outline"
-          onClick={() => onLearnMore(listing.title)}
-        >
-          Learn More
-        </Button>
+        <Button className="w-full min-h-[44px]" variant="outline">View Details</Button>
       </div>
     </div>
   );
 };
 
 const ForSale = () => {
-  const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
+  const [selectedFallbackImage, setSelectedFallbackImage] = useState<string>(sale1Img);
+  const [inquiryPropertyTitle, setInquiryPropertyTitle] = useState<string | null>(null);
   const { location, loading: locationLoading, error: locationError, permissionDenied, requestLocation, clearLocation } = useGeolocation();
 
   const { data: properties = [], isLoading } = useQuery({
@@ -132,6 +130,16 @@ const ForSale = () => {
   useEffect(() => {
     document.title = "Homes for Sale | Precision Capital";
   }, []);
+
+  const handlePropertyClick = (propertyId: string, index: number) => {
+    setSelectedPropertyId(propertyId);
+    setSelectedFallbackImage(fallbackImages[index % fallbackImages.length]);
+  };
+
+  const handleInquire = (propertyTitle: string) => {
+    setSelectedPropertyId(null);
+    setInquiryPropertyTitle(propertyTitle);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -209,9 +217,9 @@ const ForSale = () => {
                     key={listing.id} 
                     listing={listing} 
                     index={index}
-                    onLearnMore={setSelectedProperty}
                     userLocation={location}
                     fallbackImage={fallbackImages[index % fallbackImages.length]}
+                    onClick={() => handlePropertyClick(listing.id, index)}
                   />
                 ))}
               </div>
@@ -221,10 +229,19 @@ const ForSale = () => {
       </main>
       <Footer />
 
+      <PropertyDetailDialog
+        open={!!selectedPropertyId}
+        onOpenChange={(open) => !open && setSelectedPropertyId(null)}
+        propertyId={selectedPropertyId}
+        fallbackImage={selectedFallbackImage}
+        onApplyOrInquire={handleInquire}
+        actionLabel="Inquire Now"
+      />
+
       <PropertyInquiryDialog
-        open={!!selectedProperty}
-        onOpenChange={(open) => !open && setSelectedProperty(null)}
-        propertyTitle={selectedProperty || ""}
+        open={!!inquiryPropertyTitle}
+        onOpenChange={(open) => !open && setInquiryPropertyTitle(null)}
+        propertyTitle={inquiryPropertyTitle || ""}
       />
     </div>
   );

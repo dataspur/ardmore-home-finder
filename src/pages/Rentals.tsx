@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -10,6 +10,7 @@ import { calculateDistance, formatDistance } from "@/lib/distance";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin, Loader2, X } from "lucide-react";
+import PropertyDetailDialog from "@/components/PropertyDetailDialog";
 import rental1Img from "@/assets/rental-1.png";
 import rental2Img from "@/assets/rental-2.png";
 import rental3Img from "@/assets/rental-3.png";
@@ -33,12 +34,14 @@ const PropertyCard = ({
   listing, 
   index,
   userLocation,
-  fallbackImage
+  fallbackImage,
+  onClick
 }: { 
   listing: Property; 
   index: number;
   userLocation: { latitude: number; longitude: number } | null;
   fallbackImage: string;
+  onClick: () => void;
 }) => {
   const { ref, isVisible } = useScrollAnimation();
 
@@ -55,7 +58,8 @@ const PropertyCard = ({
   return (
     <div 
       ref={ref}
-      className={`bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-elevated transition-all duration-500 hover:-translate-y-2 group ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+      onClick={onClick}
+      className={`bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-elevated transition-all duration-500 hover:-translate-y-2 group cursor-pointer ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
       style={{ transitionDelay: `${index * 100}ms` }}
     >
       <div className="h-56 overflow-hidden relative">
@@ -83,15 +87,15 @@ const PropertyCard = ({
         <h3 className="font-heading text-h3 text-foreground mb-2">{listing.title}</h3>
         <p className="font-heading text-price text-primary mb-1">{listing.price_display}</p>
         <p className="font-body text-muted-foreground mb-6">{listing.size_sqft ? `${listing.size_sqft.toLocaleString()} sq ft` : ""}</p>
-        <Link to="/resident-portal">
-          <Button className="w-full min-h-[44px]">Apply Now</Button>
-        </Link>
+        <Button className="w-full min-h-[44px]">View Details</Button>
       </div>
     </div>
   );
 };
 
 const Rentals = () => {
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
+  const [selectedFallbackImage, setSelectedFallbackImage] = useState<string>(rental1Img);
   const { location, loading: locationLoading, error: locationError, permissionDenied, requestLocation, clearLocation } = useGeolocation();
 
   const { data: properties = [], isLoading } = useQuery({
@@ -125,6 +129,17 @@ const Rentals = () => {
   useEffect(() => {
     document.title = "Available Rentals | Precision Capital";
   }, []);
+
+  const handlePropertyClick = (propertyId: string, index: number) => {
+    setSelectedPropertyId(propertyId);
+    setSelectedFallbackImage(fallbackImages[index % fallbackImages.length]);
+  };
+
+  const handleApply = () => {
+    // Close dialog and navigate to resident portal
+    setSelectedPropertyId(null);
+    window.location.href = "/resident-portal";
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -204,6 +219,7 @@ const Rentals = () => {
                     index={index}
                     userLocation={location}
                     fallbackImage={fallbackImages[index % fallbackImages.length]}
+                    onClick={() => handlePropertyClick(listing.id, index)}
                   />
                 ))}
               </div>
@@ -212,6 +228,15 @@ const Rentals = () => {
         </section>
       </main>
       <Footer />
+
+      <PropertyDetailDialog
+        open={!!selectedPropertyId}
+        onOpenChange={(open) => !open && setSelectedPropertyId(null)}
+        propertyId={selectedPropertyId}
+        fallbackImage={selectedFallbackImage}
+        onApplyOrInquire={handleApply}
+        actionLabel="Apply Now"
+      />
     </div>
   );
 };
