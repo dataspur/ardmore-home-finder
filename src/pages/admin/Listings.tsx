@@ -14,6 +14,13 @@ import type { Database } from "@/integrations/supabase/types";
 type Property = Database["public"]["Tables"]["properties"]["Row"];
 type PropertyInsert = Database["public"]["Tables"]["properties"]["Insert"];
 
+interface PropertyImage {
+  id?: string;
+  url: string;
+  displayOrder: number;
+  isPrimary: boolean;
+}
+
 export default function Listings() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"rental" | "sale">("rental");
@@ -32,14 +39,49 @@ export default function Listings() {
     },
   });
 
+  const savePropertyImages = async (propertyId: string, images: PropertyImage[]) => {
+    // Delete existing images for this property
+    await supabase
+      .from("property_images")
+      .delete()
+      .eq("property_id", propertyId);
+
+    // Insert new images
+    if (images.length > 0) {
+      const imageRecords = images.map((img, index) => ({
+        property_id: propertyId,
+        image_url: img.url,
+        display_order: index,
+        is_primary: index === 0,
+      }));
+
+      const { error } = await supabase
+        .from("property_images")
+        .insert(imageRecords);
+
+      if (error) {
+        console.error("Failed to save property images:", error);
+        throw error;
+      }
+    }
+  };
+
   const createMutation = useMutation({
-    mutationFn: async (property: PropertyInsert) => {
+    mutationFn: async (property: PropertyInsert & { _images?: PropertyImage[] }) => {
+      const { _images, ...propertyData } = property;
+      
       const { data, error } = await supabase
         .from("properties")
-        .insert(property)
+        .insert(propertyData)
         .select()
         .single();
       if (error) throw error;
+
+      // Save images
+      if (_images && _images.length > 0) {
+        await savePropertyImages(data.id, _images);
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -53,14 +95,22 @@ export default function Listings() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Property> }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Property> & { _images?: PropertyImage[] } }) => {
+      const { _images, ...propertyUpdates } = updates;
+      
       const { data, error } = await supabase
         .from("properties")
-        .update(updates)
+        .update(propertyUpdates)
         .eq("id", id)
         .select()
         .single();
       if (error) throw error;
+
+      // Save images
+      if (_images) {
+        await savePropertyImages(id, _images);
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -76,6 +126,7 @@ export default function Listings() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Images will be cascade deleted due to foreign key
       const { error } = await supabase.from("properties").delete().eq("id", id);
       if (error) throw error;
     },
@@ -88,7 +139,7 @@ export default function Listings() {
     },
   });
 
-  const handleSubmit = (data: PropertyInsert) => {
+  const handleSubmit = (data: PropertyInsert & { _images?: PropertyImage[] }) => {
     if (editingProperty) {
       updateMutation.mutate({ id: editingProperty.id, updates: data });
     } else {

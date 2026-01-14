@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -30,10 +30,13 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { supabase } from "@/integrations/supabase/client";
+import { MultiImageUpload, PropertyImage } from "./MultiImageUpload";
 import type { Database } from "@/integrations/supabase/types";
 
 type Property = Database["public"]["Tables"]["properties"]["Row"];
 type PropertyInsert = Database["public"]["Tables"]["properties"]["Insert"];
+type PropertyImageRow = Database["public"]["Tables"]["property_images"]["Row"];
 
 const propertySchema = z.object({
   property_type: z.enum(["rental", "sale"]),
@@ -103,6 +106,9 @@ export function PropertyFormDialog({
   isSubmitting,
   defaultPropertyType,
 }: PropertyFormDialogProps) {
+  const [propertyImages, setPropertyImages] = useState<PropertyImage[]>([]);
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+  
   const form = useForm<FormValues>({
     resolver: zodResolver(propertySchema),
     defaultValues: {
@@ -116,6 +122,30 @@ export function PropertyFormDialog({
   });
 
   const propertyType = form.watch("property_type");
+
+  // Fetch existing images when editing a property
+  const fetchPropertyImages = useCallback(async (propertyId: string) => {
+    const { data, error } = await supabase
+      .from('property_images')
+      .select('*')
+      .eq('property_id', propertyId)
+      .order('display_order', { ascending: true });
+    
+    if (error) {
+      console.error('Failed to fetch property images:', error);
+      return;
+    }
+
+    const images: PropertyImage[] = (data || []).map((img: PropertyImageRow) => ({
+      id: img.id,
+      url: img.image_url,
+      displayOrder: img.display_order,
+      isPrimary: img.is_primary,
+    }));
+    
+    setPropertyImages(images);
+    setImagesLoaded(true);
+  }, []);
 
   useEffect(() => {
     if (property) {
@@ -150,6 +180,7 @@ export function PropertyFormDialog({
         latitude: property.latitude,
         longitude: property.longitude,
       });
+      fetchPropertyImages(property.id);
     } else {
       form.reset({
         property_type: defaultPropertyType,
@@ -159,10 +190,23 @@ export function PropertyFormDialog({
         state: "OK",
         badge: "Available",
       });
+      setPropertyImages([]);
+      setImagesLoaded(true);
     }
-  }, [property, defaultPropertyType, form]);
+  }, [property, defaultPropertyType, form, fetchPropertyImages]);
 
-  const handleFormSubmit = (values: FormValues) => {
+  // Reset when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setPropertyImages([]);
+      setImagesLoaded(false);
+    }
+  }, [open]);
+
+  const handleFormSubmit = async (values: FormValues) => {
+    // Get primary image URL for backward compatibility
+    const primaryImage = propertyImages.find(img => img.isPrimary) || propertyImages[0];
+    
     const propertyData: PropertyInsert = {
       property_type: values.property_type,
       title: values.title,
@@ -186,7 +230,7 @@ export function PropertyFormDialog({
       deposit_cents: values.deposit_cents ?? null,
       available_date: values.available_date || null,
       description: values.description || null,
-      image_url: values.image_url || null,
+      image_url: primaryImage?.url || values.image_url || null,
       virtual_tour_url: values.virtual_tour_url || null,
       badge: values.badge || null,
       is_active: values.is_active ?? true,
@@ -194,6 +238,10 @@ export function PropertyFormDialog({
       latitude: values.latitude ?? null,
       longitude: values.longitude ?? null,
     };
+    
+    // Pass images data along with property data
+    (propertyData as any)._images = propertyImages;
+    
     onSubmit(propertyData);
   };
 
@@ -719,20 +767,19 @@ export function PropertyFormDialog({
                   Media
                 </h3>
                 
-                <FormField
-                  control={form.control}
-                  name="image_url"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Primary Image URL</FormLabel>
-                      <FormControl>
-                        <Input placeholder="https://example.com/image.jpg" {...field} />
-                      </FormControl>
-                      <FormDescription>Main listing photo URL</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="space-y-2">
+                  <FormLabel>Property Images</FormLabel>
+                  <MultiImageUpload
+                    propertyId={property?.id}
+                    images={propertyImages}
+                    onChange={setPropertyImages}
+                    maxImages={10}
+                    disabled={isSubmitting}
+                  />
+                  <FormDescription>
+                    Upload up to 10 images. Images are automatically compressed. Drag to reorder.
+                  </FormDescription>
+                </div>
 
                 <FormField
                   control={form.control}
