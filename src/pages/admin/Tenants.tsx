@@ -115,6 +115,11 @@ export default function Tenants() {
     return matchesSearch && matchesPaymentFilter;
   });
 
+  // Count paid and unpaid tenants (only those with active leases)
+  const tenantsWithActiveLeases = tenantsWithLeases.filter((t) => t.lease);
+  const paidCount = tenantsWithActiveLeases.filter((t) => t.isPaid).length;
+  const unpaidCount = tenantsWithActiveLeases.filter((t) => !t.isPaid).length;
+
   const fetchTenantsWithLeases = async () => {
     // Fetch tenants
     const { data: tenants, error: tenantsError } = await supabase
@@ -497,15 +502,15 @@ export default function Tenants() {
           className="justify-start"
         >
           <ToggleGroupItem value="all" aria-label="Show all tenants">
-            All
+            All ({tenantsWithActiveLeases.length})
           </ToggleGroupItem>
           <ToggleGroupItem value="paid" aria-label="Show paid tenants">
             <Check className="h-4 w-4 mr-1" />
-            Paid
+            Paid ({paidCount})
           </ToggleGroupItem>
           <ToggleGroupItem value="unpaid" aria-label="Show unpaid tenants">
             <X className="h-4 w-4 mr-1" />
-            Unpaid
+            Unpaid ({unpaidCount})
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
