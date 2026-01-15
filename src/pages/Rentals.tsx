@@ -136,9 +136,12 @@ const Rentals = () => {
   };
 
   const handleApply = () => {
-    // Close dialog and navigate to resident portal
-    setSelectedPropertyId(null);
-    window.location.href = "/resident-portal";
+    // Open Google Form application in new tab
+    window.open(
+      "https://docs.google.com/forms/d/e/1FAIpQLSe4iu362Hivy42kKBTjv38crQotmTAt6E7Qxx6cfzu5Pkvd2g/viewform",
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   return (
