@@ -140,9 +140,9 @@ const Rentals = () => {
     const baseUrl = "https://docs.google.com/forms/d/e/1FAIpQLSe4iu362Hivy42kKBTjv38crQotmTAt6E7Qxx6cfzu5Pkvd2g/viewform";
     
     // Add prefilled property field if title is provided
-    // Using entry.1000000 as placeholder - replace with actual field ID from Google Form
+    // Using entry.1596142826 for "Address of house you are applying for" field
     const url = propertyTitle 
-      ? `${baseUrl}?entry.1000000=${encodeURIComponent(propertyTitle)}`
+      ? `${baseUrl}?entry.1596142826=${encodeURIComponent(propertyTitle)}`
       : baseUrl;
     
     // Open Google Form application in new tab
