@@ -135,13 +135,18 @@ const Rentals = () => {
     setSelectedFallbackImage(fallbackImages[index % fallbackImages.length]);
   };
 
-  const handleApply = () => {
+  const handleApply = (propertyTitle?: string) => {
+    // Base Google Form URL
+    const baseUrl = "https://docs.google.com/forms/d/e/1FAIpQLSe4iu362Hivy42kKBTjv38crQotmTAt6E7Qxx6cfzu5Pkvd2g/viewform";
+    
+    // Add prefilled property field if title is provided
+    // Using entry.1000000 as placeholder - replace with actual field ID from Google Form
+    const url = propertyTitle 
+      ? `${baseUrl}?entry.1000000=${encodeURIComponent(propertyTitle)}`
+      : baseUrl;
+    
     // Open Google Form application in new tab
-    window.open(
-      "https://docs.google.com/forms/d/e/1FAIpQLSe4iu362Hivy42kKBTjv38crQotmTAt6E7Qxx6cfzu5Pkvd2g/viewform",
-      "_blank",
-      "noopener,noreferrer"
-    );
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   return (

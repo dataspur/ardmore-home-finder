@@ -67,7 +67,7 @@ interface PropertyDetailDialogProps {
   onOpenChange: (open: boolean) => void;
   propertyId: string | null;
   fallbackImage: string;
-  onApplyOrInquire?: (propertyTitle: string) => void;
+  onApplyOrInquire?: (propertyInfo: string) => void;
   actionLabel?: string;
 }
 
@@ -350,7 +350,11 @@ export default function PropertyDetailDialog({
                   className="flex-1 min-h-[44px]"
                   onClick={() => {
                     if (onApplyOrInquire && property) {
-                      onApplyOrInquire(property.title);
+                      // Pass property title with full address for context
+                      const propertyInfo = fullAddress 
+                        ? `${property.title} - ${fullAddress}`
+                        : property.title;
+                      onApplyOrInquire(propertyInfo);
                     }
                   }}
                 >
