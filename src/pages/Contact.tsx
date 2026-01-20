@@ -10,8 +10,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 
 const Contact = () => {
+  const [hasMounted, setHasMounted] = useState(false);
+  
   useEffect(() => {
     document.title = "Contact Us | Precision Capital";
+    setHasMounted(true);
   }, []);
   
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
@@ -76,7 +79,7 @@ const Contact = () => {
           <div className="container mx-auto px-4">
             <div 
               ref={ref}
-              className={`grid lg:grid-cols-2 gap-12 max-w-5xl mx-auto transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+              className={`grid lg:grid-cols-2 gap-12 max-w-5xl mx-auto transition-all duration-700 ${hasMounted || isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
             >
               {/* Contact Form */}
               <div className="bg-card rounded-2xl p-8 shadow-card">

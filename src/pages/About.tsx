@@ -1,7 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { Check, Phone, Building } from "lucide-react";
+import { Check, Phone, Building, User } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import bradyNormanImg from "@/assets/brady-norman.png";
 
@@ -13,8 +13,12 @@ const whyChooseUs = [
 ];
 
 const About = () => {
+  const [hasMounted, setHasMounted] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  
   useEffect(() => {
     document.title = "About Us | Precision Capital";
+    setHasMounted(true);
   }, []);
 
   const { ref: missionRef, isVisible: missionVisible } = useScrollAnimation();
@@ -40,7 +44,7 @@ const About = () => {
           <div className="container mx-auto px-4">
             <div 
               ref={missionRef}
-              className={`max-w-3xl mx-auto transition-all duration-700 ${missionVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+              className={`max-w-3xl mx-auto transition-all duration-700 ${hasMounted || missionVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
             >
               <h2 className="font-heading text-h2-mobile md:text-h2 text-foreground mb-6">Our Mission</h2>
               <p className="font-body text-body-lg text-muted-foreground leading-relaxed">
@@ -55,14 +59,14 @@ const About = () => {
           <div className="container mx-auto px-4">
             <div 
               ref={whyRef}
-              className={`max-w-3xl mx-auto transition-all duration-700 ${whyVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+              className={`max-w-3xl mx-auto transition-all duration-700 ${hasMounted || whyVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
             >
               <h2 className="font-heading text-h2-mobile md:text-h2 text-foreground mb-8">Why Choose Us?</h2>
               <ul className="space-y-4">
                 {whyChooseUs.map((item, index) => (
                   <li 
                     key={item} 
-                    className={`flex items-center gap-3 font-body text-body-lg text-muted-foreground transition-all duration-500 ${whyVisible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"}`}
+                    className={`flex items-center gap-3 font-body text-body-lg text-muted-foreground transition-all duration-500 ${hasMounted || whyVisible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"}`}
                     style={{ transitionDelay: `${index * 100}ms` }}
                   >
                     <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -81,19 +85,26 @@ const About = () => {
           <div className="container mx-auto px-4">
             <div 
               ref={founderRef}
-              className={`max-w-4xl mx-auto transition-all duration-700 ${founderVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+              className={`max-w-4xl mx-auto transition-all duration-700 ${hasMounted || founderVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
             >
               <h2 className="font-heading text-h2-mobile md:text-h2 text-foreground mb-10 text-center">Meet the Founder</h2>
               
               <div className="flex flex-col md:flex-row gap-8 items-start">
                 {/* Photo */}
                 <div className="flex-shrink-0 mx-auto md:mx-0">
-                  <img 
-                    src={bradyNormanImg} 
-                    alt="Brady Norman, Founder of Precision Capital" 
-                    className="w-64 h-80 object-cover rounded-lg shadow-lg"
-                    loading="lazy"
-                  />
+                  {imageError ? (
+                    <div className="w-64 h-80 bg-muted rounded-lg shadow-lg flex items-center justify-center">
+                      <User className="w-24 h-24 text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <img 
+                      src={bradyNormanImg} 
+                      alt="Brady Norman, Founder of Precision Capital" 
+                      className="w-64 h-80 object-cover rounded-lg shadow-lg"
+                      loading="lazy"
+                      onError={() => setImageError(true)}
+                    />
+                  )}
                 </div>
 
                 {/* Bio Content */}
